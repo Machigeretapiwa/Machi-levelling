@@ -1,0 +1,1282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SYSTEM // Skill Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<script type="module">
+// ════════════════════════════════════════════════════
+// FIREBASE CONFIG — paste your config from Firebase Console here
+// ════════════════════════════════════════════════════
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey:            "AIzaSyBlhQ-iA4ci0GkcqsnP3mC7L7PGjGmzIJo",
+  authDomain:        "skill-system-c591a.firebaseapp.com",
+  projectId:         "skill-system-c591a",
+  storageBucket:     "skill-system-c591a.firebasestorage.app",
+  messagingSenderId: "59585436248",
+  appId:             "1:59585436248:web:a4957437b3c526b5ce082d",
+  measurementId:     "G-YYCZ01W5H0"
+};
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+window._fbAuth = auth;
+window._fbDb   = db;
+window._GoogleAuthProvider = GoogleAuthProvider;
+window._signInWithPopup    = signInWithPopup;
+window._fbSignOut          = signOut;
+window._fbDoc              = doc;
+window._fbGetDoc           = getDoc;
+window._fbSetDoc           = setDoc;
+
+// Watch auth state — drives the whole app flow
+onAuthStateChanged(auth, user => {
+  if (user) {
+    window._fbUser = user;
+    document.getElementById('loginScreen').classList.remove('show');
+    const sob = document.getElementById('signOutBtn');
+    if (sob) { sob.style.display = 'flex'; sob.querySelector('.sob-name').textContent = user.displayName || user.email; }
+    // Boot: load data then reveal start screen
+    if (typeof initApp === 'function') {
+      initApp().then(() => {
+        const ss = document.getElementById('startScreen');
+        if (_dataCache && _dataCache.playerName && _dataCache.playerName !== 'PLAYER') {
+          ss.classList.add('continue-mode');
+        }
+        ss.classList.add('show');
+      });
+    }
+  } else {
+    window._fbUser = null;
+    document.getElementById('startScreen').classList.remove('show');
+    document.getElementById('welcomeScreen').style.display = 'none';
+    document.getElementById('mainApp').classList.remove('show');
+    document.getElementById('returnBtn').style.display = 'none';
+    document.getElementById('licensePanel').classList.remove('visible');
+    document.getElementById('chatBtn').classList.remove('visible');
+    const sob = document.getElementById('signOutBtn');
+    if (sob) sob.style.display = 'none';
+    document.getElementById('loginScreen').classList.add('show');
+  }
+});
+</script>
+<style>
+:root{
+  --bg:#020408;--bg2:#050b12;--panel:#080f1a;--panel2:#0c1520;
+  --border:#0d2240;--border-glow:#1a4a8a;
+  --blue:#0a84ff;--blue-dim:#0a4a8a;--blue-bright:#40aaff;
+  --cyan:#00e5ff;--purple:#8855ff;--gold:#ffd700;--gold-dim:#8a6d00;
+  --red:#ff3355;--green:#00ff88;--white:#e8f4ff;--grey:#3a5570;--text-dim:#4a6580;
+  --grade-4:#607080;--grade-3:#00bb55;--grade-2:#0a84ff;--grade-1:#cc9900;--special:#cc2244;
+  --steel:#607080;--bronze:#cd7f32;--silver:#b0b8c8;--goldC:#d4a820;--ruby:#cc2244;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--white);font-family:'Rajdhani',sans-serif;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);pointer-events:none;z-index:1;}
+#particles{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:0.4;}
+
+/* ── LOGIN SCREEN ── */
+#loginScreen{position:fixed;inset:0;z-index:1001;background:#000;display:none;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;}
+#loginScreen.show{display:flex;}
+.ls-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 40%,rgba(10,132,255,0.09) 0%,transparent 65%);}
+.ls-ring{position:absolute;border-radius:50%;border:1px solid rgba(10,132,255,0.1);animation:ringPulse 3s ease-in-out infinite;}
+.ls-ring:nth-child(2){width:320px;height:320px;}
+.ls-ring:nth-child(3){width:520px;height:520px;animation-delay:1s;border-color:rgba(10,132,255,0.05);}
+.ls-content{position:relative;z-index:2;text-align:center;padding:40px 24px;}
+.ls-eyebrow{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:8px;color:var(--blue);margin-bottom:16px;}
+.ls-title{font-family:'Orbitron',sans-serif;font-size:clamp(36px,6vw,72px);font-weight:900;letter-spacing:5px;color:var(--white);text-shadow:0 0 50px rgba(10,132,255,0.6);line-height:1.05;}
+.ls-title span{color:var(--blue-bright);}
+.ls-sub{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--text-dim);margin-top:14px;}
+.ls-divider{width:80px;height:1px;background:linear-gradient(90deg,transparent,var(--blue-dim),transparent);margin:36px auto;}
+.ls-signin-label{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:4px;color:var(--text-dim);margin-bottom:20px;}
+.ls-google-btn{display:flex;align-items:center;gap:14px;background:rgba(10,132,255,0.08);border:1px solid var(--border-glow);color:var(--white);font-family:'Orbitron',sans-serif;font-size:12px;letter-spacing:2px;padding:14px 32px;cursor:pointer;transition:all 0.25s;position:relative;overflow:hidden;}
+.ls-google-btn::before{content:'';position:absolute;inset:0;background:rgba(10,132,255,0.0);transition:background 0.25s;}
+.ls-google-btn:hover{border-color:var(--blue);box-shadow:0 0 28px rgba(10,132,255,0.25);}
+.ls-google-btn:hover::before{background:rgba(10,132,255,0.08);}
+.ls-google-icon{width:20px;height:20px;flex-shrink:0;}
+.ls-error{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--red);margin-top:16px;letter-spacing:1px;min-height:18px;}
+
+/* ── SIGN OUT BUTTON ── */
+#signOutBtn{position:fixed;top:20px;left:20px;z-index:45;display:none;align-items:center;gap:10px;background:rgba(2,4,8,0.88);border:1px solid var(--border);color:var(--text-dim);font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;padding:8px 14px;cursor:pointer;transition:all 0.25s;backdrop-filter:blur(6px);}
+#signOutBtn:hover{border-color:var(--red);color:var(--red);}
+.sob-avatar{width:22px;height:22px;border-radius:50%;object-fit:cover;border:1px solid var(--border-glow);}
+.sob-name{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* ── START SCREEN ── */
+#startScreen{position:fixed;inset:0;z-index:1000;background:#000;display:none;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;}
+#startScreen.show{display:flex;}
+#startScreen.fade-out{animation:screenFade 1.2s forwards;}
+#startScreen.fade-in{animation:screenFadeIn 0.7s forwards;}
+@keyframes screenFadeIn{from{opacity:0;}to{opacity:1;}}
+@keyframes screenFade{0%{opacity:1;}100%{opacity:0;pointer-events:none;}}
+.ss-prompt-continue{display:none;}
+#startScreen.continue-mode .ss-prompt{display:none;}
+#startScreen.continue-mode .ss-prompt-continue{display:block;margin-top:72px;font-family:'Orbitron',sans-serif;font-size:12px;letter-spacing:5px;color:var(--cyan);opacity:0;animation:fadeUp 1s 1.6s forwards,blink 2s 2.5s ease-in-out infinite;}
+.ss-ring{position:absolute;border-radius:50%;border:1px solid rgba(10,132,255,0.12);animation:ringPulse 3s ease-in-out infinite;}
+.ss-ring:nth-child(1){width:300px;height:300px;}
+.ss-ring:nth-child(2){width:500px;height:500px;animation-delay:1s;border-color:rgba(10,132,255,0.06);}
+.ss-ring:nth-child(3){width:700px;height:700px;animation-delay:2s;border-color:rgba(10,132,255,0.03);}
+@keyframes ringPulse{0%,100%{transform:scale(1);opacity:0.6;}50%{transform:scale(1.04);opacity:1;}}
+.ss-glow{position:absolute;width:600px;height:600px;background:radial-gradient(ellipse,rgba(10,132,255,0.1) 0%,transparent 70%);animation:glowPulse 4s ease-in-out infinite;}
+@keyframes glowPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.15);}}
+.ss-hex{position:absolute;color:rgba(10,132,255,0.06);font-size:clamp(60px,8vw,110px);opacity:0;animation:hexFloat 7s ease-in-out infinite;}
+@keyframes hexFloat{0%{opacity:0;transform:translateY(15px);}30%{opacity:1;}70%{opacity:1;}100%{opacity:0;transform:translateY(-15px);}}
+.ss-content{position:relative;z-index:2;text-align:center;padding:20px;}
+.ss-eyebrow{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:8px;color:var(--blue);opacity:0;animation:fadeUp 1s 0.4s forwards;}
+.ss-title{font-family:'Orbitron',sans-serif;font-size:clamp(40px,7vw,90px);font-weight:900;letter-spacing:6px;color:var(--white);text-shadow:0 0 60px rgba(10,132,255,0.7);opacity:0;animation:fadeUp 1s 0.7s forwards;line-height:1.05;}
+.ss-title span{color:var(--blue-bright);}
+.ss-sub{font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:3px;color:var(--text-dim);margin-top:16px;opacity:0;animation:fadeUp 1s 1s forwards;}
+.ss-prompt{margin-top:72px;font-family:'Orbitron',sans-serif;font-size:12px;letter-spacing:5px;color:var(--blue);opacity:0;animation:fadeUp 1s 1.6s forwards,blink 2s 2.5s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:0.3;}50%{opacity:1;}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── WELCOME SCREEN ── */
+#welcomeScreen{position:fixed;inset:0;z-index:999;background:#000;display:none;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;}
+#welcomeScreen.show{display:flex;}
+#welcomeScreen.fade-out{animation:screenFade 1s forwards;}
+.ws-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,rgba(10,132,255,0.07) 0%,transparent 65%);}
+.ws-bar{position:absolute;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--blue-dim),transparent);opacity:0;}
+.ws-bar-top{top:18%;animation:barAppear 0.5s 0.4s forwards;}
+.ws-bar-bot{bottom:18%;animation:barAppear 0.5s 0.6s forwards;}
+@keyframes barAppear{to{opacity:0.5;}}
+.ws-content{position:relative;z-index:2;text-align:center;padding:40px 24px;}
+.ws-sys{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:8px;color:var(--blue);opacity:0;animation:fadeUp 0.6s 0.2s forwards;}
+.ws-wlc{font-family:'Orbitron',sans-serif;font-size:clamp(13px,2vw,18px);letter-spacing:4px;color:var(--text-dim);margin-top:28px;opacity:0;animation:fadeUp 0.6s 0.6s forwards;}
+.ws-name{font-family:'Orbitron',sans-serif;font-size:clamp(36px,7vw,80px);font-weight:900;letter-spacing:5px;color:var(--white);text-shadow:0 0 40px rgba(10,132,255,0.5);margin-top:6px;opacity:0;animation:fadeUp 0.8s 0.9s forwards;}
+.ws-div{width:100px;height:2px;background:linear-gradient(90deg,transparent,var(--blue),transparent);margin:28px auto;opacity:0;animation:fadeUp 0.5s 1.3s forwards;}
+.ws-rl{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:4px;color:var(--text-dim);opacity:0;animation:fadeUp 0.5s 1.5s forwards;}
+.ws-grade{font-family:'Orbitron',sans-serif;font-size:clamp(22px,4vw,46px);font-weight:900;letter-spacing:4px;margin-top:8px;opacity:0;animation:fadeUp 0.7s 1.7s forwards;}
+.ws-week{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--text-dim);margin-top:20px;opacity:0;animation:fadeUp 0.5s 2.1s forwards;}
+.ws-enter{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:6px;color:var(--blue);margin-top:52px;opacity:0;animation:fadeUp 0.5s 2.5s forwards,blink 1.5s 3s infinite;}
+
+/* ── MAIN APP ── */
+#mainApp{display:none;position:relative;z-index:2;}
+#mainApp.show{display:block;}
+.app{max-width:1400px;margin:0 auto;padding:24px;}
+.header{text-align:center;padding:48px 0 32px;position:relative;}
+.header::before{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:600px;height:200px;background:radial-gradient(ellipse,rgba(10,132,255,0.07) 0%,transparent 70%);pointer-events:none;}
+.system-label{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:8px;color:var(--blue);margin-bottom:12px;opacity:0.7;}
+.header h1{font-family:'Orbitron',sans-serif;font-size:clamp(28px,4vw,52px);font-weight:900;letter-spacing:4px;color:var(--white);text-shadow:0 0 40px rgba(10,132,255,0.6);line-height:1;}
+.header h1 span{color:var(--blue-bright);}
+.player-info{margin-top:16px;display:flex;justify-content:center;align-items:center;gap:24px;flex-wrap:wrap;}
+.player-name-display{font-family:'Orbitron',sans-serif;font-size:14px;color:var(--cyan);letter-spacing:2px;}
+.overall-rank{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,rgba(255,215,0,0.08),rgba(255,215,0,0.03));border:1px solid rgba(255,215,0,0.25);padding:6px 16px;font-family:'Orbitron',sans-serif;font-size:13px;color:var(--gold);letter-spacing:2px;}
+.semester-badge{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-dim);letter-spacing:2px;}
+
+/* ── RETURN BUTTON ── */
+.return-btn{position:fixed;bottom:28px;right:28px;z-index:50;background:rgba(2,4,8,0.92);border:1px solid var(--border-glow);color:var(--text-dim);font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:3px;padding:10px 16px;cursor:pointer;transition:all 0.25s;display:flex;align-items:center;gap:8px;backdrop-filter:blur(6px);}
+.return-btn:hover{border-color:var(--blue);color:var(--blue-bright);box-shadow:0 0 16px rgba(10,132,255,0.2);}
+.return-btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;}
+
+/* ── LICENSE PANEL (top-right) ── */
+#licensePanel{position:fixed;top:20px;right:20px;z-index:40;display:none;flex-direction:column;gap:8px;align-items:flex-end;}
+#licensePanel.visible{display:flex;}
+
+.lic-card{
+  width:190px;position:relative;overflow:hidden;cursor:default;
+  background:var(--lc-bg,#080f1a);
+  border:1px solid var(--lc-border,#1a4a8a);
+  box-shadow:0 4px 20px var(--lc-shadow,rgba(10,132,255,0.12));
+  transition:box-shadow 0.3s,transform 0.2s;
+  padding:0;
+}
+.lic-card:hover{transform:translateX(-3px);box-shadow:0 6px 32px var(--lc-shadow,rgba(10,132,255,0.22));}
+.lic-top-bar{height:3px;background:linear-gradient(90deg,var(--lc-accent),color-mix(in srgb,var(--lc-accent) 60%,white));}
+.lic-body{padding:10px 12px 8px;}
+.lic-tier-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+.lic-gem{font-size:16px;filter:drop-shadow(0 0 5px var(--lc-shadow,rgba(10,132,255,0.5)));line-height:1;}
+.lic-tier{font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:3px;color:var(--lc-accent);font-weight:700;text-transform:uppercase;}
+.lic-grade-label{font-family:'Orbitron',sans-serif;font-size:14px;font-weight:900;color:var(--lc-accent);letter-spacing:1px;text-shadow:0 0 10px var(--lc-shadow);line-height:1.1;}
+.lic-name{font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(255,255,255,0.5);margin-top:6px;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.lic-divider{height:1px;background:var(--lc-border);margin:7px 0;opacity:0.6;}
+.lic-prog-label{font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--text-dim);letter-spacing:1px;margin-bottom:4px;}
+.lic-bar-bg{height:4px;background:rgba(255,255,255,0.05);overflow:hidden;}
+.lic-bar-fill{height:100%;background:linear-gradient(90deg,var(--lc-accent),color-mix(in srgb,var(--lc-accent) 60%,white));transition:width 1s cubic-bezier(0.4,0,0.2,1);}
+.lic-next{font-family:'Share Tech Mono',monospace;font-size:8px;margin-top:5px;color:var(--lc-accent);opacity:0.75;letter-spacing:0.5px;}
+.lic-watermark{position:absolute;bottom:-10px;right:4px;font-family:'Orbitron',sans-serif;font-size:56px;color:var(--lc-accent);opacity:0.035;pointer-events:none;line-height:1;font-weight:900;}
+
+/* grade color sets */
+.lic-steel{--lc-accent:var(--steel);--lc-bg:#06080c;--lc-border:#303840;--lc-shadow:rgba(96,112,128,0.2);}
+.lic-bronze{--lc-accent:var(--bronze);--lc-bg:#0d0904;--lc-border:#4a2e10;--lc-shadow:rgba(205,127,50,0.25);}
+.lic-silver{--lc-accent:var(--silver);--lc-bg:#090a0d;--lc-border:#3a3d48;--lc-shadow:rgba(176,184,200,0.2);}
+.lic-gold{--lc-accent:var(--goldC);--lc-bg:#0d0b04;--lc-border:#4a3d08;--lc-shadow:rgba(212,168,32,0.3);}
+.lic-ruby{--lc-accent:var(--ruby);--lc-bg:#0d0406;--lc-border:#4a0814;--lc-shadow:rgba(204,34,68,0.35);}
+
+/* ── GRADE LEGEND ── */
+.grade-legend{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:24px 0;}
+.grade-chip{font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:4px 12px;border:1px solid currentColor;opacity:0.65;cursor:default;}
+.grade-chip:hover{opacity:1;}
+.g-4{color:var(--steel)}.g-3{color:var(--bronze)}.g-2{color:var(--silver)}.g-1{color:var(--goldC)}.g-s{color:var(--ruby);background:rgba(204,34,68,0.05);}
+
+/* ── NAV ── */
+.nav{display:flex;border-bottom:1px solid var(--border);margin-bottom:32px;overflow-x:auto;}
+.nav-btn{font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;padding:14px 24px;background:none;border:none;color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.2s;white-space:nowrap;}
+.nav-btn:hover{color:var(--blue-bright);}
+.nav-btn.active{color:var(--blue-bright);border-bottom-color:var(--blue-bright);text-shadow:0 0 12px rgba(64,170,255,0.5);}
+.view{display:none;}.view.active{display:block;}
+
+/* ── TOP BAR ── */
+.top-controls{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:20px;}
+.semester-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.semester-select{background:var(--panel);border:1px solid var(--border);color:var(--white);font-family:'Share Tech Mono',monospace;font-size:11px;padding:8px 12px;cursor:pointer;outline:none;}
+.semester-select option{background:var(--panel);}
+.new-sem-btn{background:none;border:1px solid var(--blue-dim);color:var(--blue);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;padding:8px 14px;cursor:pointer;transition:all 0.2s;}
+.new-sem-btn:hover{background:rgba(10,132,255,0.1);border-color:var(--blue);}
+.del-sem-btn{background:none;border:1px solid rgba(255,51,85,0.3);color:rgba(255,51,85,0.5);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;padding:8px 14px;cursor:pointer;transition:all 0.2s;}
+.del-sem-btn:hover{background:rgba(255,51,85,0.08);border-color:var(--red);color:var(--red);}
+.week-selector{display:flex;align-items:center;gap:10px;}
+.week-label{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--text-dim);}
+.week-select{background:var(--panel);border:1px solid var(--border-glow);color:var(--white);font-family:'Orbitron',sans-serif;font-size:11px;padding:8px 14px;cursor:pointer;outline:none;letter-spacing:1px;}
+.week-select option{background:var(--panel);}
+.cur-week-badge{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--gold);border:1px solid rgba(255,215,0,0.25);padding:4px 10px;transition:opacity 0.3s;}
+
+/* ── SKILLS GRID ── */
+.skills-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:20px;}
+.skill-card{background:var(--panel);border:1px solid var(--border);position:relative;overflow:hidden;transition:border-color 0.3s,transform 0.2s;animation:fadeIn 0.35s ease;padding-bottom:34px;}
+.skill-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--card-color,var(--blue)),transparent);}
+.skill-card:hover{border-color:var(--card-color,var(--blue));transform:translateY(-2px);box-shadow:0 6px 28px rgba(10,132,255,0.09);}
+@keyframes specialPulse{0%,100%{box-shadow:0 0 8px rgba(204,34,68,0.2);border-color:rgba(204,34,68,0.35);}50%{box-shadow:0 0 28px rgba(204,34,68,0.5);border-color:rgba(204,34,68,0.75);}}
+.skill-card.special-grade{animation:specialPulse 2.5s ease infinite;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+
+.card-header{display:flex;align-items:flex-start;justify-content:space-between;padding:20px 20px 12px;gap:12px;cursor:pointer;}
+.card-icon{font-size:28px;flex-shrink:0;}
+.card-title-wrap{flex:1;}
+.card-title{font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;color:var(--white);line-height:1.3;}
+.card-sub{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px;margin-top:3px;}
+.grade-badge{font-family:'Orbitron',sans-serif;font-size:10px;font-weight:900;padding:4px 10px;border:1px solid currentColor;flex-shrink:0;letter-spacing:1px;}
+
+/* ── SKILL LICENSE BADGE (bottom strip of card) ── */
+.skill-lic-badge{
+  position:absolute;bottom:0;left:0;right:0;height:32px;
+  display:flex;align-items:center;gap:8px;
+  padding:0 12px;
+  background:linear-gradient(90deg,var(--slb-bg,rgba(96,112,128,0.12)),rgba(0,0,0,0));
+  border-top:1px solid var(--slb-border,rgba(96,112,128,0.2));
+}
+.slb-gem{font-size:13px;filter:drop-shadow(0 0 4px var(--slb-glow,rgba(96,112,128,0.7)));line-height:1;}
+.slb-tier{font-family:'Orbitron',sans-serif;font-size:8px;font-weight:700;letter-spacing:2px;color:var(--slb-color,var(--steel));}
+.slb-sep{color:var(--text-dim);font-size:10px;opacity:0.4;}
+.slb-player{font-family:'Share Tech Mono',monospace;font-size:8px;color:rgba(255,255,255,0.4);letter-spacing:0.5px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:90px;}
+.slb-grade{font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--slb-color,var(--steel));margin-left:auto;letter-spacing:0.5px;opacity:0.8;}
+
+/* ── XP SECTION ── */
+.xp-section{padding:0 20px 14px;}
+.xp-labels{display:flex;justify-content:space-between;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim);margin-bottom:6px;}
+.xp-bar-bg{height:5px;background:rgba(255,255,255,0.05);overflow:hidden;}
+.xp-bar-fill{height:100%;background:linear-gradient(90deg,var(--card-color,var(--blue)),color-mix(in srgb,var(--card-color,var(--blue)) 65%,white 35%));transition:width 0.9s cubic-bezier(0.4,0,0.2,1);position:relative;}
+.xp-bar-fill::after{content:'';position:absolute;right:0;top:0;bottom:0;width:20px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.35));animation:shimmer 2s infinite;}
+@keyframes shimmer{0%,100%{opacity:0.3;}50%{opacity:1;}}
+.pct-text{font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;}
+
+/* ── WEEKLY OBJECTIVES ── */
+.weekly-section{margin:0 20px 14px;border:1px solid rgba(255,215,0,0.13);background:rgba(255,215,0,0.025);}
+.weekly-header{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid rgba(255,215,0,0.1);}
+.weekly-tag{font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:2px;color:var(--gold);font-weight:700;}
+.weekly-count{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim);margin-left:auto;}
+.weekly-obj-list{padding:8px 12px;}
+.wobj-item{display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-top:1px solid rgba(255,255,255,0.03);cursor:pointer;}
+.wobj-item:first-child{border-top:none;}
+.wobj-check{width:14px;height:14px;border:1px solid rgba(255,215,0,0.35);flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;transition:all 0.2s;}
+.wobj-check.done{background:var(--gold);border-color:var(--gold);}
+.wobj-check.done::after{content:'✓';font-size:9px;color:#000;font-weight:bold;}
+.wobj-text{font-family:'Rajdhani',sans-serif;font-size:12px;color:var(--grey);line-height:1.4;font-weight:500;transition:color 0.15s;}
+.wobj-item.done .wobj-text{color:var(--text-dim);text-decoration:line-through;text-decoration-color:rgba(255,215,0,0.4);}
+.wobj-item:hover .wobj-text{color:var(--white);}
+.no-weekly{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim);padding:10px 12px;letter-spacing:1px;opacity:0.4;}
+
+/* ── TASKS ── */
+.tasks-section{padding:0 20px 12px;}
+.tasks-toggle{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--text-dim);cursor:pointer;padding:4px 0;display:flex;align-items:center;gap:8px;background:none;border:none;width:100%;transition:color 0.2s;}
+.tasks-toggle:hover{color:var(--blue-bright);}
+.tasks-toggle::after{content:'';flex:1;height:1px;background:var(--border);}
+.tasks-inner{display:none;}
+.tasks-inner.open{display:block;}
+.task-item{display:flex;align-items:flex-start;gap:10px;padding:6px 0;border-top:1px solid rgba(255,255,255,0.04);cursor:pointer;}
+.task-item:first-child{border-top:none;}
+.task-check{width:15px;height:15px;border:1px solid var(--card-color,var(--blue));flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;transition:all 0.2s;}
+.task-check.done{background:var(--card-color,var(--blue));}
+.task-check.done::after{content:'✓';font-size:9px;color:white;font-weight:bold;}
+.task-text{font-size:12px;color:var(--grey);line-height:1.4;font-family:'Rajdhani',sans-serif;font-weight:500;transition:color 0.15s;}
+.task-item.done .task-text{color:var(--text-dim);text-decoration:line-through;}
+.task-item:hover .task-text{color:var(--white);}
+
+/* ── PROOF ── */
+.proof-section{padding:10px 20px 12px;border-top:1px solid var(--border);background:rgba(0,0,0,0.2);}
+.proof-label{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim);letter-spacing:2px;margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+.proof-label::after{content:'';flex:1;height:1px;background:var(--border);}
+.proof-input{width:100%;background:rgba(255,255,255,0.025);border:1px solid var(--border);color:var(--white);font-family:'Share Tech Mono',monospace;font-size:11px;padding:8px 10px;resize:none;height:52px;transition:border-color 0.2s;outline:none;}
+.proof-input:focus{border-color:var(--card-color,var(--blue));}
+.proof-input::placeholder{color:var(--text-dim);}
+.card-del{position:absolute;top:8px;right:8px;background:none;border:none;color:transparent;font-size:11px;cursor:pointer;padding:4px;transition:color 0.2s;}
+.skill-card:hover .card-del{color:rgba(255,51,85,0.35);}
+.card-del:hover{color:var(--red)!important;}
+.add-skill-btn{width:100%;border:1px dashed var(--border);background:none;color:var(--text-dim);font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:2px;padding:28px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:12px;margin-top:20px;}
+.add-skill-btn:hover{border-color:var(--blue);color:var(--blue);background:rgba(10,132,255,0.03);}
+
+/* ── STATS ── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;}
+.stat-card{background:var(--panel);border:1px solid var(--border);padding:24px;position:relative;}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--card-color,var(--blue));}
+.stat-num{font-family:'Orbitron',sans-serif;font-size:44px;font-weight:900;line-height:1;color:var(--card-color,var(--blue));text-shadow:0 0 20px currentColor;}
+.stat-label{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--text-dim);margin-top:8px;}
+.level-section{margin-top:40px;}
+.level-section h2{font-family:'Orbitron',sans-serif;font-size:14px;letter-spacing:3px;color:var(--blue-bright);margin-bottom:20px;display:flex;align-items:center;gap:16px;}
+.level-section h2::after{content:'';flex:1;height:1px;background:var(--border);}
+.threshold-grid{display:grid;gap:10px;}
+.threshold-row{display:grid;grid-template-columns:140px 60px 1fr auto;align-items:center;gap:16px;padding:12px 16px;background:var(--panel2);border:1px solid var(--border);border-left:3px solid var(--g-color,var(--border));}
+.thresh-grade{font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;color:var(--g-color);}
+.thresh-pct{font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--text-dim);}
+.thresh-bar-bg{height:4px;background:rgba(255,255,255,0.05);}
+.thresh-bar-fill{height:100%;}
+.thresh-desc{font-size:12px;color:var(--grey);font-family:'Rajdhani',sans-serif;text-align:right;}
+
+/* ── MODALS ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);}
+.modal-overlay.hidden{display:none;}
+.modal{background:var(--panel);border:1px solid var(--border-glow);width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 0 60px rgba(10,132,255,0.18);padding:32px;position:relative;}
+.modal::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--blue),var(--cyan),var(--purple));}
+.modal h2{font-family:'Orbitron',sans-serif;font-size:16px;letter-spacing:2px;color:var(--blue-bright);margin-bottom:24px;}
+.form-group{margin-bottom:16px;}
+.form-label{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--text-dim);display:block;margin-bottom:6px;}
+.form-input,.form-select,.form-textarea{width:100%;background:rgba(255,255,255,0.03);border:1px solid var(--border);color:var(--white);font-family:'Rajdhani',sans-serif;font-size:14px;padding:10px 12px;outline:none;transition:border-color 0.2s;}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--blue);}
+.form-select option{background:#050b12;}
+.form-textarea{resize:vertical;min-height:80px;}
+.task-row{display:flex;gap:8px;margin-bottom:8px;}
+.task-row input{flex:1;background:rgba(255,255,255,0.03);border:1px solid var(--border);color:var(--white);font-family:'Rajdhani',sans-serif;font-size:13px;padding:8px 10px;outline:none;}
+.task-row input:focus{border-color:var(--blue);}
+.rm-btn{background:none;border:1px solid var(--border);color:var(--red);width:32px;cursor:pointer;font-size:14px;transition:background 0.2s;}
+.rm-btn:hover{background:rgba(255,51,85,0.1);}
+.add-task-btn{background:none;border:1px dashed var(--border);color:var(--text-dim);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;padding:8px 16px;cursor:pointer;width:100%;transition:all 0.2s;margin-top:4px;}
+.add-task-btn:hover{border-color:var(--blue);color:var(--blue);}
+.modal-actions{display:flex;gap:12px;margin-top:24px;justify-content:flex-end;}
+.btn-primary{background:var(--blue);border:none;color:white;font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:2px;padding:12px 24px;cursor:pointer;transition:all 0.2s;}
+.btn-primary:hover{background:var(--blue-bright);box-shadow:0 0 20px rgba(10,132,255,0.4);}
+.btn-cancel{background:none;border:1px solid var(--border);color:var(--text-dim);font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:2px;padding:12px 24px;cursor:pointer;transition:all 0.2s;}
+.btn-cancel:hover{border-color:var(--grey);color:var(--white);}
+
+/* ── RANK UP ── */
+.rank-up-notif{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.8);background:var(--panel);border:1px solid var(--gold);padding:40px 56px;text-align:center;z-index:600;box-shadow:0 0 80px rgba(255,215,0,0.35);opacity:0;pointer-events:none;transition:all 0.4s;}
+.rank-up-notif.show{opacity:1;transform:translate(-50%,-50%) scale(1);pointer-events:auto;}
+.ru-title{font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:4px;color:var(--text-dim);margin-bottom:12px;}
+.ru-grade{font-family:'Orbitron',sans-serif;font-size:44px;font-weight:900;color:var(--gold);text-shadow:0 0 30px rgba(255,215,0,0.6);margin-bottom:10px;}
+.ru-skill{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--grey);}
+.ru-close{margin-top:20px;background:none;border:1px solid var(--gold);color:var(--gold);font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:2px;padding:8px 24px;cursor:pointer;}
+
+/* ── SETTINGS ── */
+.settings-wrap{max-width:460px;}
+.settings-note{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim);margin-top:6px;letter-spacing:1px;}
+
+/* ── AI CHATBOT ── */
+#chatBtn{
+  position:fixed;bottom:28px;left:28px;z-index:50;
+  width:52px;height:52px;border-radius:50%;
+  background:linear-gradient(135deg,var(--blue) 0%,var(--purple) 100%);
+  border:none;cursor:pointer;display:none;align-items:center;justify-content:center;
+  box-shadow:0 0 20px rgba(10,132,255,0.45);transition:all 0.25s;font-size:22px;
+}
+#chatBtn.visible{display:flex;}
+#chatBtn:hover{transform:scale(1.1);box-shadow:0 0 36px rgba(10,132,255,0.7);}
+.chat-pulse{position:absolute;inset:-5px;border-radius:50%;border:1px solid rgba(10,132,255,0.5);animation:cpulse 2.2s ease-in-out infinite;pointer-events:none;}
+@keyframes cpulse{0%,100%{transform:scale(1);opacity:0.5;}50%{transform:scale(1.2);opacity:0;}}
+#chatPanel{
+  position:fixed;bottom:96px;left:28px;z-index:50;
+  width:350px;background:var(--panel);
+  border:1px solid var(--border-glow);
+  box-shadow:0 0 50px rgba(10,132,255,0.18);
+  display:none;flex-direction:column;
+  transform:translateY(12px);opacity:0;
+  transition:transform 0.3s,opacity 0.3s;
+}
+#chatPanel.open{display:flex;transform:translateY(0);opacity:1;}
+#chatPanel::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--blue),var(--purple));}
+.chat-hdr{display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--panel2);border-bottom:1px solid var(--border);}
+.chat-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--purple));display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.chat-hdr-name{font-family:'Orbitron',sans-serif;font-size:11px;color:var(--blue-bright);letter-spacing:1px;}
+.chat-online{font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--green);letter-spacing:1px;display:flex;align-items:center;gap:4px;margin-top:2px;}
+.chat-online::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--green);flex-shrink:0;animation:blink 2s infinite;}
+.chat-x{margin-left:auto;background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:16px;padding:2px 4px;transition:color 0.2s;}
+.chat-x:hover{color:var(--white);}
+.chat-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;min-height:220px;max-height:300px;}
+.bubble{max-width:88%;padding:10px 13px;font-family:'Rajdhani',sans-serif;font-size:13px;line-height:1.55;font-weight:500;animation:bubIn 0.22s ease;}
+@keyframes bubIn{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:translateY(0);}}
+.bubble.ai{background:rgba(10,132,255,0.1);border:1px solid rgba(10,132,255,0.2);color:var(--white);align-self:flex-start;border-bottom-left-radius:2px;}
+.bubble.usr{background:rgba(136,85,255,0.15);border:1px solid rgba(136,85,255,0.28);color:var(--white);align-self:flex-end;border-bottom-right-radius:2px;}
+.bubble.typing{background:rgba(10,132,255,0.07);border:1px solid rgba(10,132,255,0.15);align-self:flex-start;padding:13px 16px;}
+.tdot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--blue);margin:0 2px;animation:tbounce 1.2s ease-in-out infinite;}
+.tdot:nth-child(2){animation-delay:0.18s;}.tdot:nth-child(3){animation-delay:0.36s;}
+@keyframes tbounce{0%,60%,100%{transform:translateY(0);}30%{transform:translateY(-7px);}}
+.chat-chips{padding:8px 12px;display:flex;flex-wrap:wrap;gap:6px;border-top:1px solid var(--border);}
+.chip{background:none;border:1px solid var(--border-glow);color:var(--text-dim);font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:0.5px;padding:5px 10px;cursor:pointer;transition:all 0.2s;}
+.chip:hover{border-color:var(--blue);color:var(--blue-bright);}
+.chat-inp-row{display:flex;border-top:1px solid var(--border);background:var(--panel2);}
+.chat-inp{flex:1;background:none;border:none;color:var(--white);font-family:'Rajdhani',sans-serif;font-size:13px;padding:12px 14px;outline:none;}
+.chat-inp::placeholder{color:var(--text-dim);}
+.chat-send{background:none;border:none;border-left:1px solid var(--border);color:var(--blue);padding:0 16px;cursor:pointer;font-size:16px;transition:all 0.2s;}
+.chat-send:hover{background:rgba(10,132,255,0.1);color:var(--blue-bright);}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border-glow);}
+
+@media(max-width:600px){
+  .skills-grid{grid-template-columns:1fr;}
+  .stats-grid{grid-template-columns:1fr 1fr;}
+  .header h1{font-size:24px;}
+  .app{padding:12px;}
+  .threshold-row{grid-template-columns:1fr 1fr;}
+  .thresh-bar-bg,.thresh-desc{display:none;}
+  #licensePanel{top:8px;right:8px;}
+  .lic-card{width:150px;}
+  #chatPanel{width:calc(100vw - 16px);left:8px;}
+}
+</style>
+</head>
+<body>
+<canvas id="particles"></canvas>
+
+<!-- ═══ LOGIN SCREEN ═══ -->
+<div id="loginScreen">
+  <div class="ls-bg"></div>
+  <div class="ls-ring"></div><div class="ls-ring"></div>
+  <div class="ls-content">
+    <div class="ls-eyebrow">[ S Y S T E M ]</div>
+    <div class="ls-title">SKILL<br><span>SYSTEM</span></div>
+    <div class="ls-sub">PERSONAL LEVELING TRACKER · UC SEMESTER 1 2026</div>
+    <div class="ls-divider"></div>
+    <div class="ls-signin-label">AUTHENTICATE TO ACCESS YOUR SYSTEM</div>
+    <button class="ls-google-btn" onclick="loginWithGoogle()">
+      <svg class="ls-google-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      SIGN IN WITH GOOGLE
+    </button>
+    <div class="ls-error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- ═══ SIGN OUT BUTTON ═══ -->
+<button id="signOutBtn" onclick="handleSignOut()">
+  <span class="sob-name"></span>
+  <span style="opacity:0.5">· SIGN OUT</span>
+</button>
+<div id="startScreen" onclick="onStartClick()">
+  <div class="ss-ring"></div><div class="ss-ring"></div><div class="ss-ring"></div>
+  <div class="ss-glow"></div>
+  <div class="ss-hex" style="top:8%;left:4%;animation-delay:0s">⬡</div>
+  <div class="ss-hex" style="top:18%;right:6%;animation-delay:1.8s;font-size:52px">⬡</div>
+  <div class="ss-hex" style="bottom:12%;left:10%;animation-delay:3.2s;font-size:90px">⬡</div>
+  <div class="ss-hex" style="bottom:22%;right:4%;animation-delay:0.9s">⬡</div>
+  <div class="ss-hex" style="top:48%;left:1%;animation-delay:2.4s;font-size:44px">⬡</div>
+  <div class="ss-hex" style="top:4%;left:42%;animation-delay:1.2s;font-size:36px">⬡</div>
+  <div class="ss-content">
+    <div class="ss-eyebrow">[ S Y S T E M ]</div>
+    <div class="ss-title">SKILL<br><span>SYSTEM</span></div>
+    <div class="ss-sub">PERSONAL LEVELING TRACKER · UC SEMESTER 1 2026</div>
+    <div class="ss-prompt">▶ CLICK TO BEGIN</div>
+    <div class="ss-prompt-continue">▶ CONTINUE</div>
+  </div>
+</div>
+
+<!-- ═══ WELCOME SCREEN ═══ -->
+<div id="welcomeScreen">
+  <div class="ws-bg"></div>
+  <div class="ws-bar ws-bar-top"></div>
+  <div class="ws-bar ws-bar-bot"></div>
+  <div class="ws-content">
+    <div class="ws-sys">[ S Y S T E M ]</div>
+    <div class="ws-wlc">WELCOME BACK,</div>
+    <div class="ws-name" id="wsName">PLAYER</div>
+    <div class="ws-div"></div>
+    <div class="ws-rl">CURRENT OVERALL RANK</div>
+    <div class="ws-grade" id="wsGrade">4TH GRADE</div>
+    <div class="ws-week" id="wsWeek">WEEK — · SEMESTER —</div>
+    <div class="ws-enter">▶ ENTERING SYSTEM…</div>
+  </div>
+</div>
+
+<!-- ═══ MAIN APP ═══ -->
+<div id="mainApp">
+  <div class="app">
+    <div class="header">
+      <div class="system-label">[ S Y S T E M ]</div>
+      <h1>SKILL <span>SYSTEM</span></h1>
+      <div class="player-info">
+        <div class="player-name-display" id="playerNameDisplay">PLAYER</div>
+        <div class="overall-rank" id="overallRankDisplay">⬡ RANK: —</div>
+        <div class="semester-badge" id="semesterBadgeDisplay">SEMESTER —</div>
+      </div>
+    </div>
+    <div class="grade-legend">
+      <div class="grade-chip g-4">⬡ STEEL · 0–39%</div>
+      <div class="grade-chip g-3">🟤 BRONZE · 40–59%</div>
+      <div class="grade-chip g-2">⬜ SILVER · 60–74%</div>
+      <div class="grade-chip g-1">🟡 GOLD · 75–89%</div>
+      <div class="grade-chip g-s">🔴 RUBY · 90–100%</div>
+    </div>
+    <nav class="nav">
+      <button class="nav-btn active" onclick="switchView('skills',this)">SKILLS</button>
+      <button class="nav-btn" onclick="switchView('stats',this)">STATISTICS</button>
+      <button class="nav-btn" onclick="switchView('settings',this)">SETTINGS</button>
+    </nav>
+
+    <!-- SKILLS VIEW -->
+    <div id="view-skills" class="view active">
+      <div class="top-controls">
+        <div class="semester-controls">
+          <select class="semester-select" id="semesterSelect" onchange="switchSemester(this.value)"></select>
+          <button class="new-sem-btn" onclick="openNewSemesterModal()">+ NEW SEMESTER</button>
+          <button class="del-sem-btn" onclick="deleteCurrentSemester()">DELETE</button>
+        </div>
+        <div class="week-selector">
+          <span class="week-label">VIEWING WEEK</span>
+          <select class="week-select" id="weekSelect" onchange="onWeekChange(this.value)"></select>
+          <div class="cur-week-badge" id="curWeekBadge">★ CURRENT</div>
+        </div>
+      </div>
+      <div class="skills-grid" id="skillsGrid"></div>
+      <button class="add-skill-btn" onclick="openAddSkillModal()"><span style="font-size:20px">+</span> ADD SKILL</button>
+    </div>
+
+    <!-- STATS VIEW -->
+    <div id="view-stats" class="view">
+      <div class="stats-grid" id="statsGrid"></div>
+      <div class="level-section">
+        <h2>GRADE THRESHOLDS</h2>
+        <div class="threshold-grid">
+          <div class="threshold-row" style="--g-color:var(--steel)"><div class="thresh-grade">⬡ STEEL</div><div class="thresh-pct">0–39%</div><div class="thresh-bar-bg"><div class="thresh-bar-fill" style="width:39%;background:var(--steel)"></div></div><div class="thresh-desc">Below targets — keep pushing</div></div>
+          <div class="threshold-row" style="--g-color:var(--bronze)"><div class="thresh-grade">🟤 BRONZE</div><div class="thresh-pct">40–59%</div><div class="thresh-bar-bg"><div class="thresh-bar-fill" style="width:59%;background:var(--bronze)"></div></div><div class="thresh-desc">Making progress</div></div>
+          <div class="threshold-row" style="--g-color:var(--silver)"><div class="thresh-grade">⬜ SILVER</div><div class="thresh-pct">60–74%</div><div class="thresh-bar-bg"><div class="thresh-bar-fill" style="width:74%;background:var(--silver)"></div></div><div class="thresh-desc">Solid competence</div></div>
+          <div class="threshold-row" style="--g-color:var(--goldC)"><div class="thresh-grade">🟡 GOLD</div><div class="thresh-pct">75–89%</div><div class="thresh-bar-bg"><div class="thresh-bar-fill" style="width:89%;background:var(--goldC)"></div></div><div class="thresh-desc">Meeting & exceeding targets</div></div>
+          <div class="threshold-row" style="--g-color:var(--ruby)"><div class="thresh-grade">🔴 RUBY</div><div class="thresh-pct">90–100%</div><div class="thresh-bar-bg"><div class="thresh-bar-fill" style="width:100%;background:var(--ruby)"></div></div><div class="thresh-desc">Way beyond all targets</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS VIEW -->
+    <div id="view-settings" class="view">
+      <div class="settings-wrap">
+        <div class="form-group"><label class="form-label">PLAYER NAME</label><input class="form-input" id="playerNameInput" placeholder="Enter your name" oninput="savePlayerName(this.value)"></div>
+        <div class="form-group" style="margin-top:16px"><label class="form-label">CURRENT SEMESTER NAME</label><input class="form-input" id="semesterNameInput" placeholder="e.g. Semester 1, 2026" oninput="updateSemesterName(this.value)"></div>
+        <div class="form-group" style="margin-top:16px">
+          <label class="form-label">CURRENT WEEK NUMBER</label>
+          <input class="form-input" id="currentWeekInput" type="number" min="1" max="20" placeholder="3" oninput="saveCurrentWeek(this.value)">
+          <div class="settings-note">Update this each week — weekly objectives and licenses sync automatically.</div>
+        </div>
+        <div style="margin-top:32px;padding-top:24px;border-top:1px solid var(--border)">
+          <p class="settings-note" style="margin-bottom:16px">DANGER ZONE</p>
+          <button onclick="clearAllData()" style="background:none;border:1px solid rgba(255,51,85,0.3);color:rgba(255,51,85,0.5);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;padding:10px 20px;cursor:pointer;">RESET ALL DATA</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ LICENSE PANEL ═══ -->
+<div id="licensePanel"></div>
+
+<!-- ═══ RETURN BUTTON ═══ -->
+<button class="return-btn" id="returnBtn" onclick="returnToStart()" style="display:none">
+  <svg viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6"/></svg>EXIT
+</button>
+
+<!-- ═══ AI CHAT BUTTON ═══ -->
+<button id="chatBtn" onclick="toggleChat()" title="Ask ARIA">
+  <div class="chat-pulse"></div>✦
+</button>
+
+<!-- ═══ AI CHAT PANEL ═══ -->
+<div id="chatPanel">
+  <div class="chat-hdr">
+    <div class="chat-av">✦</div>
+    <div>
+      <div class="chat-hdr-name">ARIA · SYSTEM AI</div>
+      <div class="chat-online">ONLINE</div>
+    </div>
+    <button class="chat-x" onclick="toggleChat()">✕</button>
+  </div>
+  <div class="chat-msgs" id="chatMsgs"></div>
+  <div class="chat-chips" id="chatChips">
+    <button class="chip" onclick="chipSend(this)">What's my grade?</button>
+    <button class="chip" onclick="chipSend(this)">This week's priorities?</button>
+    <button class="chip" onclick="chipSend(this)">How close to next grade?</button>
+    <button class="chip" onclick="chipSend(this)">How does scoring work?</button>
+  </div>
+  <div class="chat-inp-row">
+    <input class="chat-inp" id="chatInp" placeholder="Ask anything…" onkeydown="if(event.key==='Enter')sendChat()">
+    <button class="chat-send" onclick="sendChat()">➤</button>
+  </div>
+</div>
+
+<!-- ═══ SKILL MODAL ═══ -->
+<div class="modal-overlay hidden" id="skillModal">
+  <div class="modal">
+    <h2 id="modalTitle">REGISTER NEW SKILL</h2>
+    <div class="form-group"><label class="form-label">SKILL NAME</label><input class="form-input" id="skillName" placeholder="e.g. Python Programming"></div>
+    <div class="form-group"><label class="form-label">CATEGORY / SUBTITLE</label><input class="form-input" id="skillCategory" placeholder="e.g. Coding · Year 1"></div>
+    <div class="form-group"><label class="form-label">ICON (emoji)</label><input class="form-input" id="skillIcon" placeholder="🐍" style="font-size:20px;width:80px"></div>
+    <div class="form-group"><label class="form-label">COLOR ACCENT</label>
+      <select class="form-select" id="skillColor">
+        <option value="var(--blue)">Blue</option><option value="var(--cyan)">Cyan</option>
+        <option value="var(--purple)">Purple</option><option value="var(--green)">Green</option>
+        <option value="var(--goldC)">Gold</option><option value="var(--red)">Red</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label">TASKS / PROOF ITEMS</label><div id="tasksBuilder"></div><button class="add-task-btn" onclick="addTaskRow()">+ ADD TASK</button></div>
+    <div class="form-group"><label class="form-label">PROOF OF COMPLETION</label><textarea class="form-textarea" id="skillProofDesc" placeholder="What counts as proof this skill is acquired?"></textarea></div>
+    <div class="modal-actions"><button class="btn-cancel" onclick="closeModal()">CANCEL</button><button class="btn-primary" onclick="saveSkill()">CONFIRM</button></div>
+  </div>
+</div>
+
+<!-- ═══ SEMESTER MODAL ═══ -->
+<div class="modal-overlay hidden" id="semesterModal">
+  <div class="modal">
+    <h2>NEW SEMESTER</h2>
+    <div class="form-group"><label class="form-label">SEMESTER NAME</label><input class="form-input" id="newSemName" placeholder="e.g. Semester 2, 2026"></div>
+    <div class="form-group"><label class="form-label">STARTING WEEK</label><input class="form-input" id="newSemWeek" type="number" min="1" max="20" value="1"></div>
+    <div class="modal-actions"><button class="btn-cancel" onclick="document.getElementById('semesterModal').classList.add('hidden')">CANCEL</button><button class="btn-primary" onclick="createNewSemester()">CREATE</button></div>
+  </div>
+</div>
+
+<!-- ═══ RANK UP ═══ -->
+<div class="rank-up-notif" id="rankUpNotif">
+  <div class="ru-title">GRADE UP</div>
+  <div class="ru-grade" id="ruGradeText"></div>
+  <div class="ru-skill" id="ruSkillText"></div>
+  <button class="ru-close" onclick="closeRankUp()">ACKNOWLEDGE</button>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════
+// PARTICLES
+// ════════════════════════════════════════════════════
+const cv=document.getElementById('particles'),cx=cv.getContext('2d');
+let PW,PH,pts=[];
+function resizeCv(){PW=cv.width=innerWidth;PH=cv.height=innerHeight;}
+window.addEventListener('resize',resizeCv);resizeCv();
+for(let i=0;i<60;i++)pts.push({x:Math.random()*PW,y:Math.random()*PH,r:Math.random()*1.4+0.3,vx:(Math.random()-.5)*.28,vy:(Math.random()-.5)*.28,a:Math.random()*.5+.1,c:Math.random()>.7?'#00e5ff':Math.random()>.5?'#0a84ff':'#8855ff'});
+(function anim(){cx.clearRect(0,0,PW,PH);pts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;if(p.x<0)p.x=PW;if(p.x>PW)p.x=0;if(p.y<0)p.y=PH;if(p.y>PH)p.y=0;cx.beginPath();cx.arc(p.x,p.y,p.r,0,Math.PI*2);cx.fillStyle=p.c;cx.globalAlpha=p.a;cx.fill();});cx.globalAlpha=1;requestAnimationFrame(anim);})();
+
+// ════════════════════════════════════════════════════
+// SPEECH — natural, enthusiastic female voice
+// ════════════════════════════════════════════════════
+function speak(text,opts={}){
+  if(!window.speechSynthesis)return;
+  window.speechSynthesis.cancel();
+  const doSpeak=()=>{
+    const u=new SpeechSynthesisUtterance(text);
+    const voices=window.speechSynthesis.getVoices();
+    // Prefer: Samantha (macOS), Google UK English Female, Microsoft Zira, any female English
+    const preferred=voices.find(v=>/samantha/i.test(v.name))
+      ||voices.find(v=>/google uk english female/i.test(v.name))
+      ||voices.find(v=>/zira/i.test(v.name))
+      ||voices.find(v=>/karen/i.test(v.name))
+      ||voices.find(v=>/female/i.test(v.name)&&/en/i.test(v.lang))
+      ||voices.find(v=>/en[-_]AU|en[-_]GB|en[-_]US/i.test(v.lang)&&v.name.toLowerCase().includes('female'))
+      ||voices.find(v=>/en/i.test(v.lang));
+    if(preferred)u.voice=preferred;
+    u.rate=opts.rate||1.08;   // slightly faster = more energetic
+    u.pitch=opts.pitch||1.15; // higher pitch = more feminine/enthusiastic
+    u.volume=opts.volume||0.95;
+    window.speechSynthesis.speak(u);
+  };
+  // Chrome loads voices async
+  if(window.speechSynthesis.getVoices().length){doSpeak();}
+  else{window.speechSynthesis.onvoiceschanged=()=>{doSpeak();window.speechSynthesis.onvoiceschanged=null;};}
+}
+
+// ════════════════════════════════════════════════════
+// GRADE / LICENSE CONFIG
+// ════════════════════════════════════════════════════
+const GRADES=[
+  {rank:5,min:90,max:100,label:'✦ RUBY',short:'RUBY',gem:'🔴',tier:'SPECIAL GRADE',color:'var(--ruby)',licClass:'lic-ruby',watermark:'✦'},
+  {rank:4,min:75,max:89,label:'GOLD',short:'GOLD',gem:'🟡',tier:'1ST GRADE',color:'var(--goldC)',licClass:'lic-gold',watermark:'◆'},
+  {rank:3,min:60,max:74,label:'SILVER',short:'SILVER',gem:'⬜',tier:'2ND GRADE',color:'var(--silver)',licClass:'lic-silver',watermark:'◇'},
+  {rank:2,min:40,max:59,label:'BRONZE',short:'BRONZE',gem:'🟤',tier:'3RD GRADE',color:'var(--bronze)',licClass:'lic-bronze',watermark:'◈'},
+  {rank:1,min:0,max:39,label:'STEEL',short:'STEEL',gem:'⬡',tier:'4TH GRADE',color:'var(--steel)',licClass:'lic-steel',watermark:'⬡'},
+];
+function getGrade(p){return GRADES.find(g=>p>=g.min)||GRADES[GRADES.length-1];}
+function nextGrade(grade){return GRADES.find(g=>g.rank===grade.rank+1)||null;}
+
+function pct(sk,cw){
+  const currentW=cw||loadData().currentWeek||3;
+  const taskScore=sk.tasks.length?Math.round(sk.tasks.filter(t=>t.done).length/sk.tasks.length*100):0;
+  const woMap=WO[sk.id]||{};
+  let tot=0,don=0;
+  for(let w=1;w<=currentW;w++){tot+=(woMap[w]||[]).length;don+=((sk.weeklyDone||{})[w]||[]).length;}
+  const weeklyScore=tot>0?Math.round(don/tot*100):taskScore;
+  if(!Object.keys(woMap).length)return taskScore;
+  return Math.round(taskScore*.5+weeklyScore*.5);
+}
+function getOverallGrade(data){
+  const sem=data.semesters[data.currentSemester];
+  if(!sem||!sem.skills.length)return getGrade(0);
+  const cw=data.currentWeek||3;
+  return getGrade(Math.round(sem.skills.reduce((s,sk)=>s+pct(sk,cw),0)/sem.skills.length));
+}
+
+// ════════════════════════════════════════════════════
+// DATA LAYER — Firestore (per-user, cross-device)
+// ════════════════════════════════════════════════════
+const KEY='skill_sys_v3'; // kept for migration fallback
+
+// In-memory cache so synchronous render() still works after first load
+let _dataCache = null;
+
+async function loadDataRemote() {
+  const user = window._fbUser;
+  if (!user) return dflt();
+  try {
+    const ref = window._fbDoc(window._fbDb, 'users', user.uid, 'appdata', 'progress');
+    const snap = await window._fbGetDoc(ref);
+    if (snap.exists()) {
+      _dataCache = snap.data();
+      return _dataCache;
+    }
+    // First time: migrate from localStorage if anything is there
+    const legacy = localStorage.getItem(KEY);
+    if (legacy) {
+      const parsed = JSON.parse(legacy);
+      await saveRemote(parsed);
+      _dataCache = parsed;
+      return parsed;
+    }
+    _dataCache = dflt();
+    await saveRemote(_dataCache);
+    return _dataCache;
+  } catch(e) {
+    console.error('Firestore load error:', e);
+    return _dataCache || dflt();
+  }
+}
+
+async function saveRemote(data) {
+  _dataCache = data;
+  const user = window._fbUser;
+  if (!user) return;
+  try {
+    const ref = window._fbDoc(window._fbDb, 'users', user.uid, 'appdata', 'progress');
+    await window._fbSetDoc(ref, data);
+  } catch(e) {
+    console.error('Firestore save error:', e);
+  }
+}
+
+// Synchronous helpers that use the in-memory cache
+// (safe to call after app has initialised via initApp())
+function loadData() { return _dataCache || dflt(); }
+function save(data) { _dataCache = data; saveRemote(data); /* fire-and-forget */ }
+
+function dflt(){const id='sem_s1_2026';return{playerName:'PLAYER',currentSemester:id,currentWeek:3,viewingWeek:3,semesters:{[id]:{name:'Semester 1, 2026',skills:defaultSkills()}}};}
+
+// ── Auth helpers ──────────────────────────────────────
+async function loginWithGoogle() {
+  const errEl = document.getElementById('loginError');
+  errEl.textContent = '';
+  try {
+    const provider = new window._GoogleAuthProvider();
+    await window._signInWithPopup(window._fbAuth, provider);
+    // onAuthStateChanged will take over from here
+  } catch(e) {
+    errEl.textContent = 'Sign-in failed: ' + (e.message || 'unknown error');
+  }
+}
+
+function handleSignOut() {
+  if (!confirm('Sign out of Skill System?')) return;
+  _dataCache = null;
+  window._fbSignOut(window._fbAuth);
+}
+
+// ── App boot — called once auth is confirmed ──────────
+async function initApp() {
+  await loadDataRemote(); // warm the cache
+  const ss = document.getElementById('startScreen');
+  // If data has real player name, use continue-mode
+  if (_dataCache && _dataCache.playerName && _dataCache.playerName !== 'PLAYER') {
+    ss.classList.add('continue-mode');
+  }
+}
+
+function defaultSkills(){return[
+  {id:'sk_python',name:'Python Programming',category:'Coding · Year 1',icon:'🐍',color:'var(--blue)',weeklyDone:{},proofNote:'',proofDesc:'All scripts run error-free. GitHub repo link.',tasks:[
+    {id:'t1',text:'Write 10 small scripts (calculator, converter, etc.)',done:false},
+    {id:'t2',text:'Conditionals + loops — guess game + password validator',done:false},
+    {id:'t3',text:'Functions + modular code — calculator with functions',done:false},
+    {id:'t4',text:'Lists + dictionaries — contact list program',done:false},
+    {id:'t5',text:'Modules + imports — multi-file program runs',done:false},
+    {id:'t6',text:'Error handling — no crashes on invalid input',done:false},
+    {id:'t7',text:'APIs — program fetching and displaying live data',done:false},
+    {id:'t8',text:'Data structures — stack + queue implemented',done:false},
+    {id:'t9',text:'Full Python project (≥300 lines, runs without errors)',done:false},
+    {id:'t10',text:'Upload all projects to GitHub',done:false},
+  ]},
+  {id:'sk_networking',name:'Networking',category:'Infrastructure · Year 1',icon:'🌐',color:'var(--cyan)',weeklyDone:{},proofNote:'',proofDesc:'OSI diagram + Packet Tracer file + subnet worksheet + cert schedule',tasks:[
+    {id:'t1',text:'OSI model — all 7 layers from memory under 5 min',done:false},
+    {id:'t2',text:'IPv4 + subnetting — 30 problems (≥27 correct)',done:false},
+    {id:'t3',text:'Routing basics + Packet Tracer topology',done:false},
+    {id:'t4',text:'Switching + VLAN configuration simulation',done:false},
+    {id:'t5',text:'Wireless — WPA2 vs WPA3 comparison written',done:false},
+    {id:'t6',text:'DNS + DHCP configuration simulation',done:false},
+    {id:'t7',text:'Network security — 10 attack types + defenses',done:false},
+    {id:'t8',text:'Full network lab topology file saved',done:false},
+    {id:'t9',text:'Post-semester cert study plan (CCNA/Network+)',done:false},
+  ]},
+  {id:'sk_robotics',name:'Robotics & Electronics',category:'Hardware · Year 1',icon:'🤖',color:'var(--green)',weeklyDone:{},proofNote:'',proofDesc:'Photos + video demos + written portfolio',tasks:[
+    {id:'t1',text:"Ohm's Law — 20 calculations (≥18 correct)",done:false},
+    {id:'t2',text:'Build 5 breadboard circuits (photos)',done:false},
+    {id:'t3',text:'Arduino IDE + LED control code (video)',done:false},
+    {id:'t4',text:'Motor driver + wheel setup — fwd/back movement',done:false},
+    {id:'t5',text:'Ultrasonic sensor — live distance readings',done:false},
+    {id:'t6',text:'Obstacle detection robot — avoids object autonomously',done:false},
+    {id:'t7',text:'Servo motor — controlled angle movement',done:false},
+    {id:'t8',text:'Line-following robot — follows track',done:false},
+    {id:'t9',text:'Written portfolio report — all projects documented',done:false},
+  ]},
+  {id:'sk_piano',name:'Piano',category:'Music · Year 1',icon:'🎹',color:'var(--purple)',weeklyDone:{},proofNote:'',proofDesc:'Scale recordings + song playthrough + performance video',tasks:[
+    {id:'t1',text:'Finger independence drills — daily practice established',done:false},
+    {id:'t2',text:'C + G + D major scales hands together at 80 BPM',done:false},
+    {id:'t3',text:'Full beginner song from memory start to finish',done:false},
+    {id:'t4',text:'Chord transitions I-IV-V-I in 3 keys at 70 BPM',done:false},
+    {id:'t5',text:'Dynamics — clear soft vs loud contrast',done:false},
+    {id:'t6',text:'Second full song learned completely',done:false},
+    {id:'t7',text:'Sight-reading — play unseen sheet at steady tempo',done:false},
+    {id:'t8',text:'4 recorded weekly practice sessions',done:false},
+    {id:'t9',text:'Record one continuous performance take',done:false},
+  ]},
+  {id:'sk_maths',name:'Discrete Mathematics',category:'University · Sem 1 2026',icon:'∑',color:'var(--goldC)',weeklyDone:{},proofNote:'',proofDesc:'All grades ≥75%. Canvas submission receipts saved.',tasks:[
+    {id:'t1',text:'Tutorial Prep — 5 sessions across semester',done:false},
+    {id:'t2',text:'Mid-Semester Test ≥75% (Fri 27 Mar, 2:30pm)',done:false},
+    {id:'t3',text:'Written Assignment ≥75% (due Sun 12 Apr)',done:false},
+    {id:'t4',text:'End-Semester Test ≥75% (Tue 13 May, 1:30pm)',done:false},
+    {id:'t5',text:'Investigative Report ≥75% (due Sun 17 May)',done:false},
+  ]},
+  {id:'sk_softtech',name:'Software Technology 1',category:'University · Sem 1 2026',icon:'💻',color:'var(--blue)',weeklyDone:{},proofNote:'',proofDesc:'All Canvas receipts. All marks ≥72%.',tasks:[
+    {id:'t1',text:'Quiz 1 ≥72% (Fri 14 Mar)',done:false},
+    {id:'t2',text:'Quiz 2 ≥72% (Fri 28 Mar)',done:false},
+    {id:'t3',text:'Case Study + Quiz 3 ≥72% (Fri 11 Apr)',done:false},
+    {id:'t4',text:'Quiz 4 ≥72% (Fri 25 Apr)',done:false},
+    {id:'t5',text:'Programming Project ≥72% (Fri 9 May)',done:false},
+  ]},
+  {id:'sk_cyber',name:'Intro Cyber Security',category:'University · Sem 1 2026',icon:'🔐',color:'var(--red)',weeklyDone:{},proofNote:'',proofDesc:'All receipts. Group formed by Wk5.',tasks:[
+    {id:'t1',text:'Quiz 1 ≥72% (Mon 9 Mar)',done:false},
+    {id:'t2',text:'Weekly Engagement Quizzes — 2% × 10 weeks',done:false},
+    {id:'t3',text:'Quiz 2 Mid-Term ≥72% (Wk6 tute — in person)',done:false},
+    {id:'t4',text:'Group Report ≥72% (Fri 9 May)',done:false},
+    {id:'t5',text:'Quiz 3 Eval ≥72% (Wk13 tute — in person)',done:false},
+  ]},
+  {id:'sk_innov',name:'Tech Innovation & Entrepreneurship',category:'University · Sem 1 2026',icon:'🚀',color:'var(--cyan)',weeklyDone:{},proofNote:'',proofDesc:'All Canvas receipts. Logbook weekly from Wk3.',tasks:[
+    {id:'t1',text:'Quiz Part 1 ≥72% (Fri 14 Mar)',done:false},
+    {id:'t2',text:'Peer Review 1 ≥72% (Fri 28 Mar)',done:false},
+    {id:'t3',text:'Quiz Part 2 ≥72% (Fri 11 Apr)',done:false},
+    {id:'t4',text:'Business Plan Report ≥72% (Fri 2 May)',done:false},
+    {id:'t5',text:'Logbook + Peer Review 2 ≥72% (Fri 9 May)',done:false},
+    {id:'t6',text:'Elevator Pitch ≥72% (Wk 12/13 tute)',done:false},
+    {id:'t7',text:'Quiz Part 3 ≥72% (Week 14)',done:false},
+  ]},
+];}
+
+// ════════════════════════════════════════════════════
+// WEEKLY OBJECTIVES
+// ════════════════════════════════════════════════════
+const WO={
+  sk_python:{1:["Set up Python + PyCharm IDE","Write first 'Hello World' script","Learn variables and data types"],2:["Write a temperature converter","Write a basic calculator script","Practice f-strings and formatting"],3:["Complete scripts 6–10 (unit converter, guess game, etc.)","Practice conditionals (if/elif/else)","Write a number guessing game"],4:["Write a password validator program","Solidify loops (for + while)","Ensure all 10 scripts run error-free"],5:["Learn functions — refactor calculator","Write modular calculator with separate functions","Understand scope and return values"],6:["Learn lists and dictionaries","Build contact list (add / remove / search)","Explore classes intro"],7:["Split project into files using imports","Run a multi-file program successfully"],8:["Learn try/except/finally error handling","Make all programs handle invalid input","Begin Case Study problems"],9:["Class free — review all Python work","Demo Case Study to tutor","Fix remaining failing scripts"],10:["Write a program fetching live API data","Display results in terminal","Explore the requests library"],11:["Implement stack data structure","Implement queue data structure","Begin ≥300 line Python project"],12:["Polish and complete project","Write group report (1000–1500 words)","Prepare demo"],13:["Upload all projects to GitHub","Final demo and presentation","Reflect on semester"],},
+  sk_networking:{1:["Begin OSI model — layers 1–4","Write each layer name and function"],2:["Complete OSI model — layers 5–7","Write full OSI from memory"],3:["Draw OSI diagram from memory in under 5 min","Add protocols to each layer","Quiz: name 2 protocols per layer"],4:["Begin IPv4 — binary, octets, CIDR","Solve first 10 subnetting problems"],5:["Solve 30 subnetting problems (aim ≥27 correct)","Understand subnet masks"],6:["Learn routing basics","Simulate basic network topology in Packet Tracer"],7:["Learn switching fundamentals","Configure VLAN simulation in Packet Tracer"],8:["Learn wireless standards (802.11 a/b/g/n/ac/ax)","Write WPA2 vs WPA3 comparison"],9:["Class free — review networking notes Wks 1–8"],10:["Configure DNS + DHCP simulation"],11:["Study network security fundamentals","Write 5 attack types + defenses"],12:["Write all 10 attack types + defenses","Design full lab topology"],13:["Complete and save full network lab file","Create certification study plan"],},
+  sk_robotics:{1:["Study Ohm's Law","Solve first 5 circuit calculations"],2:["Solve 20 circuit calculations (aim ≥18 correct)","Identify resistor values by colour bands"],3:["Build breadboard circuit #1 — LED + resistor","Build breadboard circuit #2 — LED + switch"],4:["Build breadboard circuits #3, #4, #5","Take photos of all 5"],5:["Install Arduino IDE","Write and upload LED blink code","Record video of LED pattern"],6:["Set up motor driver module","Wire two DC motors","Test forward/backward movement"],7:["Integrate ultrasonic sensor (HC-SR04)","Display live distance readings"],8:["Program obstacle detection","Test: robot avoids object autonomously"],9:["Class free — refine robot code"],10:["Add servo motor — program angle sweep","Test 0°, 90°, 180°"],11:["Build line-following robot","Test: follows black line track"],12:["Finalise all robot behaviours","Begin portfolio documentation"],13:["Complete portfolio — photos, videos, write-up"],},
+  sk_piano:{1:["Finger independence drills — 10 min daily","Learn hand position","Play C major scale right hand only"],2:["C major scale hands together — 60 BPM","G major scale right hand","Continue drills daily"],3:["C + G scales hands together — 80 BPM","Begin D major scale","15 min practice daily"],4:["D major scale hands together — 90 BPM","Use metronome — all 3 scales"],5:["Choose beginner song","Learn first half — each hand separately"],6:["Full beginner song hands together — slow tempo","Learn I–IV chord transitions in 3 keys"],7:["Add I–V–I transitions","Smooth at 70 BPM — no pausing"],8:["Full beginner song from memory","Dynamics — soft vs loud on same phrase"],9:["Class free — daily practice"],10:["Choose second song","Learn first half — record one session"],11:["Learn full second song","Sight-read one new piece"],12:["Record 4 sessions this week","Prepare final recording repertoire"],13:["Record continuous performance take","Write out final repertoire list"],},
+  sk_maths:{1:["Read Ch 1.1–1.3: Speaking Mathematically","Tutorial prep (engagement mark)","Attend Tue 1:30pm lecture"],2:["Read Ch 2.1–2.3: Logic Statements","Practice truth tables","Tutorial prep"],3:["Read Ch 2.4, 3.1–3.2: Digital Logic Circuits","Convert logic expressions to circuits","Attend tutorial"],4:["Read Ch 4.1–4.6: Number Theory + Proof","Practice direct proofs","Tutorial prep due"],5:["Read Ch 5.1–5.2, 5.6–5.7: Sequences + Induction","Practice induction proofs","Written Assignment questions released — read now"],6:["⚠ MID-SEMESTER TEST: Fri 27 Mar, 2:30pm, 2B09","Build open-book summary sheet","Revise Weeks 1–5"],7:["Read Ch 8.1–8.3, 8.5: Relations","Understand equivalence relations","Tutorial prep"],8:["Read Ch 9.1–9.5, 9.8: Counting + Probability","⚠ WRITTEN ASSIGNMENT due Sun 12 Apr"],9:["Class free — review Sets notes","Re-read difficult proofs"],10:["Read Ch 1.4, 10.1: Graphs intro","Understand vertices and edges","Read Investigative Report brief on Canvas"],11:["Read Ch 10.4, 10.6: Trees","Practice Prim's/Kruskal's algorithm","Begin Investigative Report"],12:["Read Ch 12.1–12.2: Regex + Automata","Practice FSA diagrams","Continue report — near-final draft"],13:["⚠ END-SEMESTER TEST: Tue 13 May, 1:30pm","⚠ INVESTIGATIVE REPORT due Sun 17 May","Revise Weeks 6–12"],},
+  sk_softtech:{1:["Install PyCharm IDE","Complete Week 1 lab: I/O basics"],2:["Week 2 lab: decision + boolean logic","Practice if/elif/else"],3:["Week 3 lab: repetition structures","Quiz 1 covers Wks 1–3 — begin revision"],4:["⚠ QUIZ 1 due Fri 23:59","Week 4 lab: Python functions"],5:["Week 5 lab: files, lists, exceptions","Write code reading/writing a .txt file"],6:["Week 6 lab: classes and objects","⚠ QUIZ 2 due Fri 23:59"],7:["Week 7 lab: Pandas + Jupyter","Load CSV, display stats"],8:["Week 8 lab: Pandas data prep","⚠ QUIZ 3 + CASE STUDY due Fri 23:59"],9:["Class free — polish Case Study","⚠ Assign to project group by Mon 23:59"],10:["Week 10 lab: data visualisation","⚠ QUIZ 4 due Fri 23:59"],11:["Week 11 lab: prediction studies","Begin programming project"],12:["⚠ PROJECT DEMO in tute","⚠ FINAL REPORT due Fri 23:59"],13:["⚠ QUIZ 5 due Fri"],},
+  sk_cyber:{1:["Read intro slides: Computers, Network, Security, Ethics","Understand CIA triad"],2:["Read Limoncelli Ch1 — Desktop Computers","Complete tute/lab","Weekly engagement quiz (2%)"],3:["Read Limoncelli Ch2 — Server Computers","Complete tute/lab","Weekly engagement quiz"],4:["Read Limoncelli Ch15 — Helpdesk","⚠ QUIZ 1 due Mon 23:59","Complete tute/lab"],5:["Read Pfleeger Ch2 + Stallings Ch2 — Cryptography","⚠ Form group by Fri 23:59 on Canvas"],6:["Read Stallings Ch6 — Malicious Software","⚠ QUIZ 2 MID-TERM in tute — IN PERSON"],7:["Read Stallings Ch7+9 — DoS + Firewalls","Begin group report research"],8:["Read Stallings Ch10+11 — Buffer Overflow","First draft of group report"],9:["Class free — continue group report"],10:["Read Stallings Ch12+27 — OS Security","Second draft review"],11:["Read Stallings Ch3+4 — Auth + Access Control","Near-final report + peer eval prep"],12:["Read Stallings Ch22–24 — Network Security","⚠ GROUP REPORT + PEER EVAL due Fri 23:59"],13:["⚠ QUIZ 3 EVAL in tute — IN PERSON"],},
+  sk_innov:{1:["Attend Week 1 lecture","Read unit outline"],2:["Form your team","Complete teambuilding in tute"],3:["⚠ Register team on Canvas","⚠ Begin Logbook (required from Week 3)","Empathy map in tute"],4:["⚠ QUIZ PART 1 due Fri","Build user empathy map","Two POV statements"],5:["Apply sci-fi concept to prototype","Begin prototype"],6:["Marketing workshop — positioning strategy","Identify IP assets","Update Logbook"],7:["⚠ PEER REVIEW 1 due Fri 23:59","IP workshop","Update Logbook"],8:["Business Model Canvas — all 9 blocks","Value Proposition Canvas","⚠ QUIZ PART 2 due Fri"],9:["Class free — work on Business Plan Report"],10:["Level 1 innovation accounting dashboard","Continue Business Plan Report"],11:["⚠ BUSINESS PLAN REPORT due Fri 23:59","Update Logbook"],12:["⚠ LOGBOOK + PEER REVIEW 2 + PITCH due Fri 23:59","⚠ PITCH SESSION #1 in tute"],13:["⚠ PITCH SESSION #2 in tute","Ethics workshop","Final Logbook entry"],14:["⚠ QUIZ PART 3 due","Reflect on semester","Archive all files"],},
+};
+
+// ════════════════════════════════════════════════════
+// WEEK SELECT
+// ════════════════════════════════════════════════════
+function populateWeekSel(){
+  const data=loadData(),cur=data.currentWeek||3,view=data.viewingWeek||cur;
+  const sel=document.getElementById('weekSelect');
+  sel.innerHTML='';
+  for(let w=1;w<=14;w++){const o=document.createElement('option');o.value=w;o.textContent='WEEK '+w+(w===cur?' ★':'');o.selected=(w===view);sel.appendChild(o);}
+  document.getElementById('curWeekBadge').style.opacity=(view===cur)?'1':'0.3';
+}
+function onWeekChange(v){const data=loadData();data.viewingWeek=parseInt(v);save(data);document.getElementById('curWeekBadge').style.opacity=(parseInt(v)===(data.currentWeek||3))?'1':'0.3';renderSkills(data);}
+
+// ════════════════════════════════════════════════════
+// LICENSE PANEL
+// ════════════════════════════════════════════════════
+function renderLicensePanel(){
+  const data=loadData();
+  const sem=data.semesters[data.currentSemester];
+  const cw=data.currentWeek||3;
+  const playerName=(data.playerName||'PLAYER').toUpperCase();
+  const panel=document.getElementById('licensePanel');
+
+  if(!sem||!sem.skills.length){panel.innerHTML='';return;}
+
+  // calculate overall average
+  const avg=Math.round(sem.skills.reduce((s,sk)=>s+pct(sk,cw),0)/sem.skills.length);
+  const og=getGrade(avg);
+  const ng=nextGrade(og);
+  const progressToNext=ng?(avg-og.min)/(ng.min-og.min)*100:100;
+  const needed=ng?ng.min-avg:0;
+
+  panel.innerHTML=`
+    <div class="lic-card ${og.licClass}">
+      <div class="lic-top-bar"></div>
+      <div class="lic-body">
+        <div class="lic-tier-row">
+          <span class="lic-gem">${og.gem}</span>
+          <span class="lic-tier">${og.tier}</span>
+        </div>
+        <div class="lic-grade-label">${og.short} GRADE</div>
+        <div class="lic-name">▸ ${playerName}</div>
+        <div class="lic-divider"></div>
+        <div class="lic-prog-label">${ng?'PROGRESS TO '+ng.short:'MAX GRADE REACHED'}</div>
+        <div class="lic-bar-bg"><div class="lic-bar-fill" style="width:${Math.min(progressToNext,100)}%"></div></div>
+        <div class="lic-next">${ng?needed+'% more for '+ng.short+'  ·  '+avg+'% now':'✦ RUBY — Top tier'}</div>
+      </div>
+      <div class="lic-watermark">${og.watermark}</div>
+    </div>`;
+}
+
+// ════════════════════════════════════════════════════
+// RENDER
+// ════════════════════════════════════════════════════
+function render(){
+  const data=loadData(),sem=data.semesters[data.currentSemester];
+  document.getElementById('playerNameDisplay').textContent=data.playerName||'PLAYER';
+  const og=getOverallGrade(data);
+  document.getElementById('overallRankDisplay').textContent='⬡ '+og.short+' GRADE';
+  document.getElementById('overallRankDisplay').style.color=og.color;
+  document.getElementById('overallRankDisplay').style.borderColor=og.color;
+  document.getElementById('semesterBadgeDisplay').textContent=sem?sem.name.toUpperCase():'—';
+  const sel=document.getElementById('semesterSelect');
+  sel.innerHTML=Object.entries(data.semesters).map(([id,s])=>`<option value="${id}" ${id===data.currentSemester?'selected':''}>${s.name}</option>`).join('');
+  document.getElementById('playerNameInput').value=data.playerName||'';
+  document.getElementById('currentWeekInput').value=data.currentWeek||3;
+  if(sem)document.getElementById('semesterNameInput').value=sem.name;
+  populateWeekSel();
+  renderSkills(data);
+  renderStats(data,sem);
+  renderLicensePanel();
+}
+
+function renderSkills(data){
+  const sem=data.semesters[data.currentSemester];
+  const grid=document.getElementById('skillsGrid');
+  if(!sem||!sem.skills.length){grid.innerHTML='<div style="text-align:center;padding:80px 20px;color:var(--text-dim);font-family:Share Tech Mono,monospace;font-size:12px;letter-spacing:1px">NO SKILLS REGISTERED · ADD ONE BELOW</div>';return;}
+  const week=data.viewingWeek||data.currentWeek||3;
+  const cw=data.currentWeek||3;
+  grid.innerHTML=sem.skills.map(sk=>card(sk,week,cw,data)).join('');
+}
+
+function card(sk,week,cw,data){
+  const p=pct(sk,cw),grade=getGrade(p);
+  const playerName=(data.playerName||'PLAYER').toUpperCase();
+  const objs=(WO[sk.id]||{})[week]||[];
+  const wkDone=(sk.weeklyDone||{})[week]||[];
+  const weeklyHTML=objs.length
+    ?`<div class="weekly-section"><div class="weekly-header"><div class="weekly-tag">⚡ WEEK ${week} OBJECTIVES</div><div class="weekly-count">${wkDone.length}/${objs.length} DONE</div></div><div class="weekly-obj-list">${objs.map((obj,i)=>{const d=wkDone.includes(i);return`<div class="wobj-item ${d?'done':''}" onclick="toggleWobj('${sk.id}',${week},${i})"><div class="wobj-check ${d?'done':''}"></div><span class="wobj-text">${obj}</span></div>`;}).join('')}</div></div>`
+    :`<div class="weekly-section"><div class="no-weekly">NO OBJECTIVES FOR WEEK ${week}</div></div>`;
+  const woMap=WO[sk.id]||{};let tot=0,don=0;
+  for(let w=1;w<=cw;w++){tot+=(woMap[w]||[]).length;don+=((sk.weeklyDone||{})[w]||[]).length;}
+  const ts=sk.tasks.length?Math.round(sk.tasks.filter(t=>t.done).length/sk.tasks.length*100):0;
+  const ws=tot>0?Math.round(don/tot*100):null;
+  const detail=ws!==null?`TASKS ${ts}% · WEEKLY ${ws}%`:'OVERALL PROGRESS';
+  const taskRows=sk.tasks.map(t=>`<div class="task-item ${t.done?'done':''}" onclick="toggleTask('${sk.id}','${t.id}')"><div class="task-check ${t.done?'done':''}"></div><span class="task-text">${t.text}</span></div>`).join('');
+  const slbStyle=`--slb-bg:${grade.licClass==='lic-ruby'?'rgba(204,34,68,0.12)':grade.licClass==='lic-gold'?'rgba(212,168,32,0.1)':grade.licClass==='lic-silver'?'rgba(176,184,200,0.1)':grade.licClass==='lic-bronze'?'rgba(205,127,50,0.1)':'rgba(96,112,128,0.1)'};--slb-border:${grade.licClass==='lic-ruby'?'rgba(204,34,68,0.25)':grade.licClass==='lic-gold'?'rgba(212,168,32,0.25)':grade.licClass==='lic-silver'?'rgba(176,184,200,0.2)':grade.licClass==='lic-bronze'?'rgba(205,127,50,0.2)':'rgba(96,112,128,0.18)'};--slb-color:${grade.color};--slb-glow:${grade.color}`;
+  return`<div class="skill-card ${p>=90?'special-grade':''}" style="--card-color:${sk.color}">
+    <button class="card-del" onclick="delSkill(event,'${sk.id}')">✕</button>
+    <div class="card-header" onclick="openEditSkillModal('${sk.id}')">
+      <div class="card-icon">${sk.icon||'⬡'}</div>
+      <div class="card-title-wrap"><div class="card-title">${sk.name}</div><div class="card-sub">${sk.category||''}</div></div>
+      <div class="grade-badge" style="color:${grade.color};border-color:${grade.color}">${grade.gem} ${grade.short}</div>
+    </div>
+    <div class="xp-section">
+      <div class="xp-labels"><span>${detail}</span><span class="pct-text" style="color:${grade.color}">${p}%</span></div>
+      <div class="xp-bar-bg"><div class="xp-bar-fill" style="width:${p}%"></div></div>
+    </div>
+    ${weeklyHTML}
+    ${sk.tasks.length?`<div class="tasks-section"><button class="tasks-toggle" onclick="toggleTasks(this)">▸ ALL TASKS (${sk.tasks.filter(t=>t.done).length}/${sk.tasks.length})</button><div class="tasks-inner">${taskRows}</div></div>`:''}
+    <div class="proof-section"><div class="proof-label">PROOF OF COMPLETION</div><textarea class="proof-input" placeholder="${sk.proofDesc||'Add proof notes...'}" onclick="event.stopPropagation()" onchange="saveProof('${sk.id}',this.value)">${sk.proofNote||''}</textarea></div>
+    <div class="skill-lic-badge" style="${slbStyle}">
+      <span class="slb-gem">${grade.gem}</span>
+      <span class="slb-tier">${grade.short}</span>
+      <span class="slb-sep">·</span>
+      <span class="slb-player">${playerName}</span>
+      <span class="slb-grade">${grade.tier}</span>
+    </div>
+  </div>`;
+}
+
+function toggleTasks(btn){const inner=btn.nextElementSibling;inner.classList.toggle('open');const o=inner.classList.contains('open');const m=btn.textContent.match(/\(.*\)/)?.[0]||'';btn.textContent=(o?'▾':'▸')+' ALL TASKS '+m;}
+
+function renderStats(data,sem){
+  if(!sem){document.getElementById('statsGrid').innerHTML='';return;}
+  const cw=data.currentWeek||3;
+  const sks=sem.skills,total=sks.reduce((s,sk)=>s+sk.tasks.length,0),done=sks.reduce((s,sk)=>s+sk.tasks.filter(t=>t.done).length,0);
+  const avg=sks.length?Math.round(sks.reduce((s,sk)=>s+pct(sk,cw),0)/sks.length):0;
+  const rubies=sks.filter(sk=>pct(sk,cw)>=90).length,golds=sks.filter(sk=>{const p2=pct(sk,cw);return p2>=75&&p2<90;}).length;
+  document.getElementById('statsGrid').innerHTML=[
+    {num:sks.length,label:'REGISTERED SKILLS',color:'var(--blue)'},{num:`${done}/${total}`,label:'TASKS COMPLETE',color:'var(--cyan)'},
+    {num:`${avg}%`,label:'AVERAGE PROGRESS',color:getGrade(avg).color},{num:rubies,label:'RUBY GRADE SKILLS',color:'var(--ruby)'},
+    {num:golds,label:'GOLD GRADE SKILLS',color:'var(--goldC)'},{num:Object.keys(data.semesters).length,label:'SEMESTERS LOGGED',color:'var(--grey)'},
+  ].map(s=>`<div class="stat-card" style="--card-color:${s.color}"><div class="stat-num" style="color:${s.color}">${s.num}</div><div class="stat-label">${s.label}</div></div>`).join('');
+}
+
+// ════════════════════════════════════════════════════
+// INTERACTIONS
+// ════════════════════════════════════════════════════
+function toggleWobj(skillId,week,idx){
+  const data=loadData(),sem=data.semesters[data.currentSemester];
+  const sk=sem.skills.find(s=>s.id===skillId);if(!sk)return;
+  if(!sk.weeklyDone)sk.weeklyDone={};
+  if(!sk.weeklyDone[week])sk.weeklyDone[week]=[];
+  const a=sk.weeklyDone[week],pos=a.indexOf(idx);
+  if(pos===-1)a.push(idx);else a.splice(pos,1);
+  save(data);renderSkills(data);renderLicensePanel();
+}
+function toggleTask(skillId,taskId){
+  const data=loadData(),sem=data.semesters[data.currentSemester];
+  const sk=sem.skills.find(s=>s.id===skillId);if(!sk)return;
+  const cw=data.currentWeek||3,prev=getGrade(pct(sk,cw));
+  const t=sk.tasks.find(t=>t.id===taskId);if(t)t.done=!t.done;
+  const nw=getGrade(pct(sk,cw));save(data);renderSkills(data);renderLicensePanel();
+  if(nw.rank>prev.rank)showRankUp(nw.label,sk.name);
+}
+function saveProof(skillId,val){const data=loadData(),sem=data.semesters[data.currentSemester];const sk=sem.skills.find(s=>s.id===skillId);if(sk){sk.proofNote=val;save(data);}}
+
+// ════════════════════════════════════════════════════
+// SKILL MODAL
+// ════════════════════════════════════════════════════
+let editId=null;
+function openAddSkillModal(){editId=null;document.getElementById('modalTitle').textContent='REGISTER NEW SKILL';['skillName','skillCategory','skillIcon','skillProofDesc'].forEach(id=>document.getElementById(id).value='');document.getElementById('skillColor').value='var(--blue)';document.getElementById('tasksBuilder').innerHTML='';addTaskRow();addTaskRow();addTaskRow();document.getElementById('skillModal').classList.remove('hidden');}
+function openEditSkillModal(skillId){const data=loadData(),sk=data.semesters[data.currentSemester].skills.find(s=>s.id===skillId);if(!sk)return;editId=skillId;document.getElementById('modalTitle').textContent='EDIT SKILL';document.getElementById('skillName').value=sk.name;document.getElementById('skillCategory').value=sk.category||'';document.getElementById('skillIcon').value=sk.icon||'';document.getElementById('skillColor').value=sk.color||'var(--blue)';document.getElementById('skillProofDesc').value=sk.proofDesc||'';document.getElementById('tasksBuilder').innerHTML='';sk.tasks.forEach(t=>addTaskRow(t.text));document.getElementById('skillModal').classList.remove('hidden');}
+function addTaskRow(v=''){const d=document.createElement('div');d.className='task-row';d.innerHTML=`<input type="text" placeholder="Task description..." value="${v.replace(/"/g,'&quot;')}"><button class="rm-btn" onclick="this.parentElement.remove()">✕</button>`;document.getElementById('tasksBuilder').appendChild(d);}
+function saveSkill(){
+  const name=document.getElementById('skillName').value.trim();if(!name)return;
+  const data=loadData(),sem=data.semesters[data.currentSemester];
+  const tasks=Array.from(document.querySelectorAll('#tasksBuilder .task-row input')).map(i=>i.value.trim()).filter(Boolean).map((text,i)=>({id:'t'+(i+1),text,done:false}));
+  if(editId){const sk=sem.skills.find(s=>s.id===editId);if(sk){const dm={};sk.tasks.forEach(t=>{dm[t.text]=t.done;});Object.assign(sk,{name,category:document.getElementById('skillCategory').value.trim(),icon:document.getElementById('skillIcon').value.trim()||'⬡',color:document.getElementById('skillColor').value,proofDesc:document.getElementById('skillProofDesc').value.trim()});sk.tasks=tasks.map(t=>({...t,done:dm[t.text]||false}));}}
+  else{sem.skills.push({id:'sk_'+Date.now(),name,category:document.getElementById('skillCategory').value.trim(),icon:document.getElementById('skillIcon').value.trim()||'⬡',color:document.getElementById('skillColor').value,proofDesc:document.getElementById('skillProofDesc').value.trim(),proofNote:'',weeklyDone:{},tasks});}
+  save(data);closeModal();render();
+}
+function delSkill(e,id){e.stopPropagation();if(!confirm('Remove this skill?'))return;const data=loadData();data.semesters[data.currentSemester].skills=data.semesters[data.currentSemester].skills.filter(s=>s.id!==id);save(data);render();}
+function closeModal(){document.getElementById('skillModal').classList.add('hidden');editId=null;}
+
+// ════════════════════════════════════════════════════
+// SEMESTER
+// ════════════════════════════════════════════════════
+function switchSemester(id){const d=loadData();d.currentSemester=id;save(d);render();}
+function openNewSemesterModal(){document.getElementById('newSemName').value='';document.getElementById('semesterModal').classList.remove('hidden');}
+function createNewSemester(){const name=document.getElementById('newSemName').value.trim();if(!name)return;const d=loadData(),id='sem_'+Date.now();d.semesters[id]={name,skills:[]};d.currentSemester=id;d.currentWeek=parseInt(document.getElementById('newSemWeek').value)||1;d.viewingWeek=d.currentWeek;save(d);document.getElementById('semesterModal').classList.add('hidden');render();}
+function deleteCurrentSemester(){const d=loadData(),keys=Object.keys(d.semesters);if(keys.length<=1){alert('Cannot delete the only semester.');return;}if(!confirm('Delete this semester and all its skills?'))return;delete d.semesters[d.currentSemester];d.currentSemester=Object.keys(d.semesters)[0];save(d);render();}
+function updateSemesterName(val){const d=loadData();if(d.semesters[d.currentSemester]){d.semesters[d.currentSemester].name=val;save(d);}document.getElementById('semesterBadgeDisplay').textContent=val.toUpperCase();const o=document.querySelector(`#semesterSelect option[value="${d.currentSemester}"]`);if(o)o.textContent=val;}
+
+// ════════════════════════════════════════════════════
+// SETTINGS
+// ════════════════════════════════════════════════════
+function savePlayerName(val){const d=loadData();d.playerName=val;save(d);document.getElementById('playerNameDisplay').textContent=val||'PLAYER';renderLicensePanel();renderSkills(d);}
+function saveCurrentWeek(val){const w=parseInt(val);if(isNaN(w)||w<1||w>20)return;const d=loadData();d.currentWeek=w;d.viewingWeek=w;save(d);populateWeekSel();renderSkills(d);renderLicensePanel();}
+function clearAllData(){if(!confirm('RESET ALL DATA? This cannot be undone.'))return;_dataCache=dflt();saveRemote(_dataCache);render();}
+
+// ════════════════════════════════════════════════════
+// RANK UP
+// ════════════════════════════════════════════════════
+function showRankUp(label,skillName){
+  document.getElementById('ruGradeText').textContent=label;
+  document.getElementById('ruSkillText').textContent=skillName.toUpperCase();
+  document.getElementById('rankUpNotif').classList.add('show');
+  speak(`Amazing! ${skillName} just ranked up to ${label}! Keep going!`,{rate:1.1,pitch:1.2});
+}
+function closeRankUp(){document.getElementById('rankUpNotif').classList.remove('show');}
+
+// ════════════════════════════════════════════════════
+// NAV
+// ════════════════════════════════════════════════════
+function switchView(view,btn){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('view-'+view).classList.add('active');btn.classList.add('active');
+  if(view==='stats')renderStats(loadData(),loadData().semesters[loadData().currentSemester]);
+}
+
+// ════════════════════════════════════════════════════
+// AI CHATBOT (powered by Claude API)
+// ════════════════════════════════════════════════════
+let chatOpen=false;
+let chatHistory=[];
+
+function toggleChat(){
+  chatOpen=!chatOpen;
+  const panel=document.getElementById('chatPanel');
+  if(chatOpen){
+    panel.classList.add('open');
+    if(chatHistory.length===0)addAIBubble("Hey! I'm Aria, your system assistant 👋 I can see all your skills and progress. What would you like to know?");
+    setTimeout(()=>document.getElementById('chatInp').focus(),300);
+  }else{
+    panel.classList.remove('open');
+  }
+}
+
+function addAIBubble(text){
+  const msgs=document.getElementById('chatMsgs');
+  const b=document.createElement('div');b.className='bubble ai';b.textContent=text;
+  msgs.appendChild(b);msgs.scrollTop=msgs.scrollHeight;
+}
+function addUserBubble(text){
+  const msgs=document.getElementById('chatMsgs');
+  const b=document.createElement('div');b.className='bubble usr';b.textContent=text;
+  msgs.appendChild(b);msgs.scrollTop=msgs.scrollHeight;
+}
+function addTyping(){
+  const msgs=document.getElementById('chatMsgs');
+  const b=document.createElement('div');b.className='bubble typing';b.id='typingBubble';
+  b.innerHTML='<span class="tdot"></span><span class="tdot"></span><span class="tdot"></span>';
+  msgs.appendChild(b);msgs.scrollTop=msgs.scrollHeight;
+  return b;
+}
+function removeTyping(){const t=document.getElementById('typingBubble');if(t)t.remove();}
+
+function chipSend(btn){document.getElementById('chatInp').value=btn.textContent;sendChat();}
+
+async function sendChat(){
+  const inp=document.getElementById('chatInp');
+  const msg=inp.value.trim();if(!msg)return;
+  inp.value='';
+  addUserBubble(msg);
+  chatHistory.push({role:'user',content:msg});
+
+  const typing=addTyping();
+
+  // Build system context from current data
+  const data=loadData();
+  const sem=data.semesters[data.currentSemester];
+  const cw=data.currentWeek||3;
+  let ctx='You are Aria, an enthusiastic and helpful AI assistant embedded in a personal skill tracking system called SKILL SYSTEM. You have full knowledge of the user\'s progress. Keep responses concise and conversational — 2-4 sentences max unless a detailed breakdown is requested. Use the user\'s name when appropriate. Be supportive and energetic.\n\n';
+  ctx+=`Player: ${data.playerName||'Player'}\nCurrent Week: ${cw}\nSemester: ${sem?sem.name:'Semester 1, 2026'}\n\n`;
+  if(sem&&sem.skills.length){
+    ctx+='SKILLS PROGRESS:\n';
+    sem.skills.forEach(sk=>{
+      const p=pct(sk,cw);const g=getGrade(p);
+      const woMap=WO[sk.id]||{};
+      const thisWeekObjs=(woMap[cw]||[]);
+      const thisWeekDone=((sk.weeklyDone||{})[cw]||[]).length;
+      ctx+=`- ${sk.name}: ${p}% (${g.short} grade) | Tasks: ${sk.tasks.filter(t=>t.done).length}/${sk.tasks.length} done | Week ${cw} objectives: ${thisWeekDone}/${thisWeekObjs.length} done\n`;
+    });
+    const avg=Math.round(sem.skills.reduce((s,sk)=>s+pct(sk,cw),0)/sem.skills.length);
+    const og=getGrade(avg);const ng=nextGrade(og);
+    ctx+=`\nOverall: ${avg}% — ${og.short} Grade${ng?' · '+String(ng.min-avg)+'% needed for '+ng.short:'  · MAX GRADE'}\n`;
+    // this week's objectives summary
+    ctx+=`\nWEEK ${cw} OBJECTIVES SUMMARY:\n`;
+    sem.skills.forEach(sk=>{
+      const objs=(WO[sk.id]||{})[cw]||[];if(!objs.length)return;
+      const done=((sk.weeklyDone||{})[cw]||[]).length;
+      const remaining=objs.filter((_,i)=>!((sk.weeklyDone||{})[cw]||[]).includes(i));
+      if(remaining.length)ctx+=`  ${sk.name}: Still to do — ${remaining.slice(0,2).join('; ')}${remaining.length>2?' + more':''}\n`;
+    });
+  }
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:300,
+        system:ctx,
+        messages:chatHistory
+      })
+    });
+    const json=await res.json();
+    const reply=json.content?.[0]?.text||'Sorry, I couldn\'t get a response right now.';
+    removeTyping();
+    addAIBubble(reply);
+    chatHistory.push({role:'assistant',content:reply});
+    // Keep history manageable
+    if(chatHistory.length>20)chatHistory=chatHistory.slice(-20);
+  }catch(e){
+    removeTyping();
+    addAIBubble('Hmm, I\'m having trouble connecting right now. Try again in a moment!');
+  }
+}
+
+// ════════════════════════════════════════════════════
+// START / WELCOME / RETURN FLOW
+// ════════════════════════════════════════════════════
+let welcomeTimer=null;
+
+function onStartClick(){
+  if(!window._fbUser){return;} // guard: shouldn't be reachable but just in case
+  const ss=document.getElementById('startScreen');
+  ss.classList.add('fade-out');
+  setTimeout(async()=>{
+    ss.classList.remove('show','fade-out','continue-mode');
+    await loadDataRemote(); // ensure fresh data before welcome
+    showWelcome();
+  },1200);
+}
+
+function showWelcome(){
+  const data=loadData();
+  const name=data.playerName||'PLAYER';
+  const og=getOverallGrade(data);
+  const sem=data.semesters[data.currentSemester];
+  const week=data.currentWeek||3;
+  document.getElementById('wsName').textContent=name.toUpperCase();
+  document.getElementById('wsGrade').textContent=og.gem+' '+og.short+' GRADE';
+  document.getElementById('wsGrade').style.color=og.color;
+  document.getElementById('wsGrade').style.textShadow='0 0 28px '+og.color;
+  document.getElementById('wsWeek').textContent='WEEK '+week+' · '+(sem?sem.name.toUpperCase():'SEMESTER 1 2026');
+  const ws=document.getElementById('welcomeScreen');
+  ws.style.display='flex';ws.offsetHeight;
+
+  // Natural, enthusiastic welcome speech
+  const ng=nextGrade(og);
+  let speechText=`Hey ${name}, welcome back! You're currently at ${og.short} grade`;
+  if(ng){const data2=loadData();const avg=Math.round((data2.semesters[data2.currentSemester]?.skills||[]).reduce((s,sk)=>s+pct(sk,data2.currentWeek||3),0)/Math.max(1,(data2.semesters[data2.currentSemester]?.skills||[]).length));const needed=ng.min-avg;speechText+=`, and you're only ${needed} percent away from ${ng.short}! Let's get it!`;}
+  else{speechText+=`! You've hit the top tier — amazing work!`;}
+  speak(speechText,{rate:1.05,pitch:1.18});
+
+  if(welcomeTimer)clearTimeout(welcomeTimer);
+  welcomeTimer=setTimeout(()=>{
+    ws.classList.add('fade-out');
+    setTimeout(()=>{
+      ws.style.display='none';ws.classList.remove('fade-out');
+      document.getElementById('mainApp').classList.add('show');
+      document.getElementById('returnBtn').style.display='flex';
+      document.getElementById('licensePanel').classList.add('visible');
+      document.getElementById('chatBtn').classList.add('visible');
+      render();
+    },1000);
+  },5000);
+}
+
+function returnToStart(){
+  if(window.speechSynthesis)window.speechSynthesis.cancel();
+  if(welcomeTimer)clearTimeout(welcomeTimer);
+  const app=document.getElementById('mainApp'),btn=document.getElementById('returnBtn');
+  const lp=document.getElementById('licensePanel'),cb=document.getElementById('chatBtn');
+  app.style.transition='opacity 0.5s';app.style.opacity='0';
+  // close chat if open
+  document.getElementById('chatPanel').classList.remove('open');chatOpen=false;
+  setTimeout(()=>{
+    app.classList.remove('show');app.style.opacity='';app.style.transition='';
+    btn.style.display='none';lp.classList.remove('visible');cb.classList.remove('visible');
+    const ss=document.getElementById('startScreen');
+    ss.classList.add('show','continue-mode','fade-in');ss.offsetHeight;
+    setTimeout(()=>ss.classList.remove('fade-in'),800);
+  },500);
+}
+</script>
+</body>
+</html>
