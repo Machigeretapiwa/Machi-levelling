@@ -1388,10 +1388,10 @@ window.showRankUp = function(label, skillName){
   if(_origShowRankUp) _origShowRankUp(label, skillName);
 };
 
-// ── SYSTEM VOICE — ElevenLabs (Deep & Cold, Solo Levelling style) ──
-// Voice: Liam — cold, deep, authoritative narrator
+// ── SYSTEM VOICE — ElevenLabs (Cold & Authoritative Female, Solo Levelling style) ──
+// Voice: Rachel — cold, precise, authoritative female narrator
 const EL_API_KEY  = 'sk_cfed47e858614300866abb8503797cf8c5a83924d80624a8';
-const EL_VOICE_ID = 'TX3LPaxmHKxFdv7VOQHJ'; // Liam — deep, cold, precise
+const EL_VOICE_ID = '21m00Tcm4TlvDq8ikWAM'; // Rachel — cold, precise, female
 
 let _currentAudio = null;
 
@@ -1436,10 +1436,10 @@ async function speak(text, opts={}) {
     if (!window.speechSynthesis) return;
     const u = new SpeechSynthesisUtterance(text);
     const voices = window.speechSynthesis.getVoices();
-    const v = voices.find(v=>/daniel|alex|david|male/i.test(v.name) && /en/i.test(v.lang))
+    const v = voices.find(v=>/samantha|karen|victoria|zira|female/i.test(v.name) && /en/i.test(v.lang))
            || voices.find(v=>/en/i.test(v.lang));
     if (v) u.voice = v;
-    u.rate = 0.82; u.pitch = 0.6; u.volume = 1.0;
+    u.rate = 0.88; u.pitch = 1.1; u.volume = 1.0;
     window.speechSynthesis.speak(u);
   }
 }
@@ -1656,7 +1656,7 @@ function composeScore(){
 function musicFadeIn(dur=3){
   masterGain.gain.cancelScheduledValues(AC2.currentTime);
   masterGain.gain.setValueAtTime(masterGain.gain.value, AC2.currentTime);
-  masterGain.gain.linearRampToValueAtTime(0.7, AC2.currentTime + dur);
+  masterGain.gain.linearRampToValueAtTime(0.25, AC2.currentTime + dur);
 }
 function musicFadeOut(dur=2){
   masterGain.gain.cancelScheduledValues(AC2.currentTime);
@@ -1700,7 +1700,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   btn.addEventListener('click', ()=>{
     muted = !muted;
     if(muted){ window.setMusicVolume(0); btn.style.color='#ff3355'; btn.style.borderColor='#ff3355'; }
-    else     { window.setMusicVolume(0.7); btn.style.color='#00e5ff'; btn.style.borderColor='#1a4a8a'; }
+    else     { window.setMusicVolume(0.25); btn.style.color='#00e5ff'; btn.style.borderColor='#1a4a8a'; }
   });
   document.body.appendChild(btn);
   window._musicBtn = btn;
