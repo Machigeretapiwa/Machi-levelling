@@ -66,6 +66,8 @@ onAuthStateChanged(auth, user => {
     document.getElementById('licensePanel').classList.remove('visible');
     document.getElementById('chatBtn').classList.remove('visible');
     document.getElementById('nameScreen').classList.remove('show');
+    const spBtn2=document.getElementById('spotifyBtn');if(spBtn2)spBtn2.classList.remove('visible');
+    const spW2=document.getElementById('spotifyWidget');if(spW2)spW2.classList.remove('visible');
     const sob = document.getElementById('signOutBtn');
     if (sob) sob.style.display = 'none';
     document.getElementById('loginScreen').classList.add('show');
@@ -516,6 +518,55 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 .xp-sk-pts{font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--text-dim);}
 .xp-sk-streak{font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--gold);}
 
+/* ── SPOTIFY WIDGET ── */
+#spotifyWidget{
+  position:fixed;bottom:80px;right:28px;z-index:48;
+  width:300px;background:var(--panel);
+  border:1px solid rgba(30,215,96,0.3);
+  box-shadow:0 0 32px rgba(30,215,96,0.1);
+  display:none;flex-direction:column;
+  backdrop-filter:blur(8px);
+  transition:opacity 0.3s,transform 0.3s;
+  transform:translateY(6px);opacity:0;
+}
+#spotifyWidget.visible{display:flex;opacity:1;transform:translateY(0);}
+#spotifyWidget::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#1ed760,rgba(30,215,96,0.3));}
+.sp-header{display:flex;align-items:center;gap:8px;padding:10px 12px 8px;border-bottom:1px solid rgba(30,215,96,0.1);}
+.sp-logo{width:16px;height:16px;flex-shrink:0;}
+.sp-sys-label{font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:3px;color:#1ed760;flex:1;}
+.sp-minimize{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:13px;padding:2px 4px;transition:color 0.2s;}
+.sp-minimize:hover{color:var(--white);}
+.sp-body{display:flex;gap:12px;padding:12px;align-items:center;}
+.sp-art{width:52px;height:52px;flex-shrink:0;background:rgba(30,215,96,0.06);border:1px solid rgba(30,215,96,0.15);object-fit:cover;}
+.sp-art-placeholder{width:52px;height:52px;flex-shrink:0;background:rgba(30,215,96,0.06);border:1px solid rgba(30,215,96,0.15);display:flex;align-items:center;justify-content:center;font-size:22px;}
+.sp-info{flex:1;min-width:0;}
+.sp-track{font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;color:var(--white);letter-spacing:0.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sp-artist{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim);letter-spacing:0.5px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sp-controls{display:flex;align-items:center;gap:6px;margin-top:8px;}
+.sp-btn{background:none;border:none;color:var(--text-dim);cursor:pointer;padding:3px;font-size:14px;transition:color 0.2s,transform 0.1s;line-height:1;}
+.sp-btn:hover{color:#1ed760;transform:scale(1.15);}
+.sp-btn.play-pause{font-size:18px;color:#1ed760;}
+.sp-btn.play-pause:hover{color:#fff;}
+.sp-progress-wrap{padding:0 12px 10px;}
+.sp-prog-row{display:flex;justify-content:space-between;font-family:'Share Tech Mono',monospace;font-size:7px;color:var(--text-dim);margin-bottom:4px;}
+.sp-prog-bg{height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden;}
+.sp-prog-fill{height:100%;background:#1ed760;border-radius:2px;transition:width 0.9s linear;}
+.sp-nothing{padding:14px 12px;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim);letter-spacing:1px;text-align:center;}
+.sp-connect-btn{display:flex;align-items:center;justify-content:center;gap:8px;margin:10px 12px 12px;background:rgba(30,215,96,0.08);border:1px solid rgba(30,215,96,0.35);color:#1ed760;font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:2px;padding:10px;cursor:pointer;transition:all 0.2s;}
+.sp-connect-btn:hover{background:rgba(30,215,96,0.15);box-shadow:0 0 16px rgba(30,215,96,0.2);}
+
+/* Spotify toggle button (bottom bar) */
+#spotifyBtn{
+  position:fixed;bottom:28px;right:76px;z-index:50;
+  width:40px;height:40px;
+  background:rgba(2,4,8,0.92);border:1px solid rgba(30,215,96,0.3);
+  cursor:pointer;display:none;align-items:center;justify-content:center;
+  transition:all 0.25s;backdrop-filter:blur(6px);
+}
+#spotifyBtn.visible{display:flex;}
+#spotifyBtn:hover{border-color:#1ed760;box-shadow:0 0 16px rgba(30,215,96,0.25);}
+#spotifyBtn svg{width:18px;height:18px;}
+
 @media(max-width:600px){
   .skills-grid{grid-template-columns:1fr;}
   .stats-grid{grid-template-columns:1fr 1fr;}
@@ -777,6 +828,49 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
     <div class="modal-actions"><button class="btn-cancel" onclick="document.getElementById('semesterModal').classList.add('hidden')">CANCEL</button><button class="btn-primary" onclick="createNewSemester()">CREATE</button></div>
   </div>
 </div>
+
+<!-- ═══ SPOTIFY WIDGET ═══ -->
+<div id="spotifyWidget">
+  <div class="sp-header">
+    <svg class="sp-logo" viewBox="0 0 24 24" fill="#1ed760"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+    <span class="sp-sys-label">SPOTIFY · LINKED</span>
+    <button class="sp-minimize" onclick="toggleSpotifyWidget()" title="Minimise">−</button>
+  </div>
+  <div id="spContent">
+    <div class="sp-nothing" id="spNothing" style="display:none">NOTHING PLAYING</div>
+    <div id="spTrackView" style="display:none">
+      <div class="sp-body">
+        <img class="sp-art" id="spArt" src="" alt="" style="display:none">
+        <div class="sp-art-placeholder" id="spArtPlaceholder">♫</div>
+        <div class="sp-info">
+          <div class="sp-track" id="spTrack">—</div>
+          <div class="sp-artist" id="spArtist">—</div>
+          <div class="sp-controls">
+            <button class="sp-btn" onclick="spPrev()" title="Previous">⏮</button>
+            <button class="sp-btn play-pause" id="spPlayPause" onclick="spTogglePlay()" title="Play/Pause">▶</button>
+            <button class="sp-btn" onclick="spNext()" title="Next">⏭</button>
+          </div>
+        </div>
+      </div>
+      <div class="sp-progress-wrap">
+        <div class="sp-prog-row"><span id="spPos">0:00</span><span id="spDur">0:00</span></div>
+        <div class="sp-prog-bg"><div class="sp-prog-fill" id="spProgFill" style="width:0%"></div></div>
+      </div>
+    </div>
+    <div id="spConnectView">
+      <div class="sp-nothing">CONNECT YOUR SPOTIFY ACCOUNT</div>
+      <button class="sp-connect-btn" onclick="spConnect()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="#1ed760"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+        CONNECT SPOTIFY
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Spotify toggle button -->
+<button id="spotifyBtn" onclick="toggleSpotifyWidget()" title="Spotify">
+  <svg viewBox="0 0 24 24" fill="#1ed760"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+</button>
 
 <!-- ═══ RANK UP ═══ -->
 <div class="rank-up-notif" id="rankUpNotif">
@@ -1192,26 +1286,35 @@ function toggleWobj(skillId,week,idx){
   if(!sk.weeklyDone[week])sk.weeklyDone[week]=[];
   const a=sk.weeklyDone[week],pos=a.indexOf(idx);
   const wasCompleting=(pos===-1);
+
+  // Snapshot before-state for bonus reversal check
+  const woMap=WO[sk.id]||{};
+  const customWO=sk.weeklyObjectives||{};
+  const allObjs=(woMap[week]||[]).concat(customWO[week]||[]);
+  const wasAllDone=allObjs.length>0&&a.length>=allObjs.length;
+
   if(wasCompleting)a.push(idx);else a.splice(pos,1);
   save(data);
 
-  // XP & streak for completing an objective
   if(wasCompleting){
+    // COMPLETING — award XP + streak bonus
     const streak=updateStreak(skillId);
     let xpGain=XP_PER_WOBJ;
-    // streak bonus
     const streakBonus=XP_STREAK_BONUS[Math.min(streak,XP_STREAK_BONUS.length-1)]||0;
     xpGain+=streakBonus;
     awardXP(skillId,xpGain,streakBonus>0?'🔥 STREAK BONUS':'');
-
-    // Check if ALL objectives for this week are now done
-    const woMap=WO[sk.id]||{};
-    const customWO=sk.weeklyObjectives||{};
-    const allObjs=(woMap[week]||[]).concat(customWO[week]||[]);
+    // Check if ALL now done — award completion bonus
     const freshDone=(loadData().semesters[data.currentSemester].skills.find(s=>s.id===skillId)?.weeklyDone||{})[week]||[];
     if(allObjs.length>0&&freshDone.length>=allObjs.length){
       awardXP(skillId,XP_WOBJ_ALL_BONUS,'WEEK COMPLETE');
       setTimeout(()=>showWeeklyCompleteBurst(sk.name,week),200);
+    }
+  } else {
+    // UN-COMPLETING — deduct base objective XP
+    awardXP(skillId,-XP_PER_WOBJ,'UNDONE');
+    // If the all-complete bonus was previously awarded, reverse it too
+    if(wasAllDone){
+      awardXP(skillId,-XP_WOBJ_ALL_BONUS,'BONUS REVERSED');
     }
   }
   renderSkills(loadData());renderLicensePanel();
@@ -1225,7 +1328,8 @@ function toggleTask(skillId,taskId){
   if(t)t.done=!t.done;
   const nw=getGrade(pct(sk,cw));save(data);renderSkills(data);renderLicensePanel();
   if(nw.rank>prev.rank)showRankUp(nw.label,sk.name);
-  if(wasCompleting)awardXP(skillId,XP_PER_TASK,'TASK DONE');
+  if(wasCompleting){awardXP(skillId,XP_PER_TASK,'TASK DONE');}
+  else{awardXP(skillId,-XP_PER_TASK,'TASK UNDONE');}
 }
 function saveProof(skillId,val){const data=loadData(),sem=data.semesters[data.currentSemester];const sk=sem.skills.find(s=>s.id===skillId);if(sk){sk.proofNote=val;save(data);}}
 
@@ -1349,11 +1453,12 @@ function getSkillStreak(skillId){const d=loadData();return(d.streaks&&d.streaks[
 function awardXP(skillId,amount,label){
   const d=loadData();
   if(!d.xp)d.xp={};
-  if(!d.streaks)d.streaks={};
   const prev=d.xp[skillId]||0;
-  d.xp[skillId]=(prev+amount);
+  // Never go below 0
+  d.xp[skillId]=Math.max(0,prev+amount);
   save(d);
-  showXPToast('+'+amount+' XP'+(label?' · '+label:''));
+  if(amount>0)showXPToast('+'+amount+' XP'+(label?' · '+label:''));
+  else if(amount<0)showXPToast(amount+' XP'+(label?' · '+label:''));
 }
 
 function updateStreak(skillId){
@@ -1482,10 +1587,7 @@ function updateWOObj(w,i,val){if(!_woData[w])_woData[w]=[];_woData[w][i]=val;}
 let chatOpen=false;
 let chatHistory=[];
 
-// HuggingFace free inference endpoint — no key needed for rate-limited use
-// Uses the public conversational pipeline
-const HF_MODEL = 'mistralai/Mistral-7B-Instruct-v0.2';
-
+// AI — powered by Anthropic API
 function toggleChat(){
   chatOpen=!chatOpen;
   const panel=document.getElementById('chatPanel');
@@ -1552,48 +1654,35 @@ async function sendChat(){
     systemPrompt+=`\nOverall: ${avg}%`;
   }
 
-  // Build prompt in Mistral chat format
-  // <s>[INST] system + user [/INST] assistant </s>
-  let prompt='<s>';
-  // Include recent history (last 6 turns)
-  const recent=chatHistory.slice(-7);
-  for(let i=0;i<recent.length;i++){
-    const m=recent[i];
-    if(m.role==='user'){
-      const isFirst=(i===0);
-      prompt+=`[INST]${isFirst?' '+systemPrompt+'\n\n':' '}${m.content} [/INST]`;
-    } else {
-      prompt+=` ${m.content}</s><s>`;
-    }
-  }
-
+  // Call Anthropic API (proxied — no key needed in this context)
   try{
-    const res=await fetch(`https://api-inference.huggingface.co/models/${HF_MODEL}`,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        inputs:prompt,
-        parameters:{max_new_tokens:300,temperature:0.7,return_full_text:false,stop:['</s>','[INST]']}
+    const apiMessages = chatHistory.slice(-12).map(m=>({role:m.role, content:m.content}));
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 400,
+        system: systemPrompt,
+        messages: apiMessages
       })
     });
-    const json=await res.json();
-    let reply='';
-    if(Array.isArray(json)&&json[0]?.generated_text){
-      reply=json[0].generated_text.trim();
+    const json = await res.json();
+    let reply = '';
+    if(json.content && json.content[0]?.text){
+      reply = json.content[0].text.trim();
     } else if(json.error){
-      // Model loading / rate limit
-      if(json.error.includes('loading')){reply='Give me a moment, my systems are initialising… try again in 20 seconds.';}
-      else{reply='I\'m having trouble connecting right now. Try again in a moment.';}
+      reply = 'System error: ' + (json.error.message || JSON.stringify(json.error));
     } else {
-      reply='No response received. Try again.';
+      reply = 'No response received.';
     }
     removeTyping();
     addAIBubble(reply);
-    chatHistory.push({role:'assistant',content:reply});
-    if(chatHistory.length>16)chatHistory=chatHistory.slice(-16);
-  }catch(e){
+    chatHistory.push({role:'assistant', content:reply});
+    if(chatHistory.length>20) chatHistory = chatHistory.slice(-20);
+  } catch(e){
     removeTyping();
-    addAIBubble('Connection error. Make sure you have internet access and try again.');
+    addAIBubble('Aria is offline. Check your connection and try again.');
   }
 }
 
@@ -1643,6 +1732,7 @@ function showWelcome(){
       document.getElementById('returnBtn').style.display='flex';
       document.getElementById('licensePanel').classList.add('visible');
       document.getElementById('chatBtn').classList.add('visible');
+      document.getElementById('spotifyBtn').classList.add('visible');
       render();
     },1000);
   },5000);
@@ -1654,6 +1744,8 @@ function returnToStart(){
   if(welcomeTimer)clearTimeout(welcomeTimer);
   const app=document.getElementById('mainApp'),btn=document.getElementById('returnBtn');
   const lp=document.getElementById('licensePanel'),cb=document.getElementById('chatBtn');
+  const spBtn=document.getElementById('spotifyBtn'),spW=document.getElementById('spotifyWidget');
+  spBtn.classList.remove('visible');spW.classList.remove('visible');
   app.style.transition='opacity 0.5s';app.style.opacity='0';
   // close chat if open
   document.getElementById('chatPanel').classList.remove('open');chatOpen=false;
@@ -2110,6 +2202,260 @@ window.onStartClick = function(){
   if(_musicBtn) { _musicBtn.style.display='flex'; _musicBtn.style.color='#00e5ff'; }
   if(_origOnStartClick) _origOnStartClick();
 };
+
+})();
+</script>
+<script>
+// ════════════════════════════════════════════════════
+// SPOTIFY PKCE INTEGRATION
+// Client ID: 6d30b2db09694aea89311bcb21d64679
+// Redirect:  https://machigeretapiwa.github.io/Machi-levelling/skill-system-v3.html
+// ════════════════════════════════════════════════════
+(function(){
+
+const SP_CLIENT_ID   = '6d30b2db09694aea89311bcb21d64679';
+const SP_REDIRECT    = 'https://machigeretapiwa.github.io/Machi-levelling/skill-system-v3.html';
+const SP_SCOPES      = 'user-read-playback-state user-modify-playback-state user-read-currently-playing';
+const SP_AUTH_URL    = 'https://accounts.spotify.com/authorize';
+const SP_TOKEN_URL   = 'https://accounts.spotify.com/api/token';
+const SP_API         = 'https://api.spotify.com/v1/me/player';
+
+let spToken      = null;
+let spExpiry     = 0;
+let spRefreshTok = null;
+let spPollTimer  = null;
+let spWidgetOpen = false;
+let spCurrentUri = null;
+
+// ── PKCE helpers ─────────────────────────────────────
+function spRandStr(len){
+  const arr=new Uint8Array(len);
+  crypto.getRandomValues(arr);
+  return Array.from(arr,b=>b.toString(16).padStart(2,'0')).join('').slice(0,len);
+}
+async function spCodeChallenge(verifier){
+  const data=new TextEncoder().encode(verifier);
+  const digest=await crypto.subtle.digest('SHA-256',data);
+  return btoa(String.fromCharCode(...new Uint8Array(digest)))
+    .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+
+// ── Connect — redirect to Spotify OAuth ─────────────
+async function spConnect(){
+  const verifier=spRandStr(64);
+  const challenge=await spCodeChallenge(verifier);
+  sessionStorage.setItem('sp_verifier',verifier);
+  const params=new URLSearchParams({
+    client_id:SP_CLIENT_ID,
+    response_type:'code',
+    redirect_uri:SP_REDIRECT,
+    scope:SP_SCOPES,
+    code_challenge_method:'S256',
+    code_challenge:challenge,
+    state:'spkce'
+  });
+  window.location.href=SP_AUTH_URL+'?'+params.toString();
+}
+window.spConnect=spConnect;
+
+// ── Exchange code for token ───────────────────────────
+async function spExchangeCode(code){
+  const verifier=sessionStorage.getItem('sp_verifier');
+  if(!verifier)return;
+  const body=new URLSearchParams({
+    client_id:SP_CLIENT_ID,
+    grant_type:'authorization_code',
+    code,
+    redirect_uri:SP_REDIRECT,
+    code_verifier:verifier
+  });
+  try{
+    const r=await fetch(SP_TOKEN_URL,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
+    const j=await r.json();
+    if(j.access_token){
+      spToken=j.access_token;
+      spExpiry=Date.now()+j.expires_in*1000-60000;
+      if(j.refresh_token)spRefreshTok=j.refresh_token;
+      sessionStorage.removeItem('sp_verifier');
+      // persist tokens in sessionStorage for the session
+      sessionStorage.setItem('sp_token',spToken);
+      sessionStorage.setItem('sp_expiry',spExpiry);
+      if(spRefreshTok)sessionStorage.setItem('sp_refresh',spRefreshTok);
+      // clean URL
+      window.history.replaceState({},'',window.location.pathname);
+      spStartPolling();
+      spRenderConnected();
+    }
+  }catch(e){console.error('Spotify token exchange failed:',e);}
+}
+
+// ── Refresh token ─────────────────────────────────────
+async function spRefresh(){
+  if(!spRefreshTok)return false;
+  const body=new URLSearchParams({client_id:SP_CLIENT_ID,grant_type:'refresh_token',refresh_token:spRefreshTok});
+  try{
+    const r=await fetch(SP_TOKEN_URL,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
+    const j=await r.json();
+    if(j.access_token){
+      spToken=j.access_token;
+      spExpiry=Date.now()+j.expires_in*1000-60000;
+      sessionStorage.setItem('sp_token',spToken);
+      sessionStorage.setItem('sp_expiry',spExpiry);
+      return true;
+    }
+  }catch(e){}
+  return false;
+}
+
+async function spGetToken(){
+  if(spToken&&Date.now()<spExpiry)return spToken;
+  if(await spRefresh())return spToken;
+  return null;
+}
+
+// ── API calls ─────────────────────────────────────────
+async function spApi(endpoint,method='GET',body=null){
+  const tok=await spGetToken();if(!tok)return null;
+  const opts={method,headers:{Authorization:'Bearer '+tok}};
+  if(body){opts.headers['Content-Type']='application/json';opts.body=JSON.stringify(body);}
+  const r=await fetch(SP_API+(endpoint?'/'+endpoint:''),opts);
+  if(r.status===204||r.status===202||r.status===200&&r.headers.get('content-length')==='0')return{ok:true};
+  if(r.ok)try{return await r.json();}catch{return{ok:true};}
+  return null;
+}
+
+// ── Playback controls ─────────────────────────────────
+async function spTogglePlay(){
+  const data=await spApi('',);
+  if(!data)return;
+  if(data.is_playing){await spApi('pause','PUT');}
+  else{await spApi('play','PUT');}
+  setTimeout(spPoll,400);
+}
+window.spTogglePlay=spTogglePlay;
+
+async function spNext(){await spApi('next','POST');setTimeout(spPoll,600);}
+window.spNext=spNext;
+async function spPrev(){await spApi('previous','POST');setTimeout(spPoll,600);}
+window.spPrev=spPrev;
+
+// ── Render helpers ────────────────────────────────────
+function spFmtTime(ms){
+  if(!ms)return'0:00';
+  const s=Math.floor(ms/1000),m=Math.floor(s/60),sec=s%60;
+  return m+':'+(sec<10?'0':'')+sec;
+}
+
+function spRenderConnected(){
+  document.getElementById('spConnectView').style.display='none';
+  document.getElementById('spNothing').style.display='none';
+  document.getElementById('spTrackView').style.display='none';
+  document.querySelector('.sp-sys-label').textContent='SPOTIFY · LINKED';
+}
+
+function spRenderTrack(d){
+  if(!d||!d.item){
+    document.getElementById('spTrackView').style.display='none';
+    document.getElementById('spNothing').style.display='block';
+    document.getElementById('spConnectView').style.display='none';
+    return;
+  }
+  document.getElementById('spNothing').style.display='none';
+  document.getElementById('spConnectView').style.display='none';
+  document.getElementById('spTrackView').style.display='block';
+
+  const track=d.item;
+  document.getElementById('spTrack').textContent=track.name;
+  document.getElementById('spArtist').textContent=track.artists.map(a=>a.name).join(', ');
+
+  // album art
+  const artImg=document.getElementById('spArt');
+  const artPh=document.getElementById('spArtPlaceholder');
+  const img=track.album?.images?.[1]?.url||track.album?.images?.[0]?.url;
+  if(img){artImg.src=img;artImg.style.display='block';artPh.style.display='none';}
+  else{artImg.style.display='none';artPh.style.display='flex';}
+
+  // play/pause icon
+  document.getElementById('spPlayPause').textContent=d.is_playing?'⏸':'▶';
+
+  // progress
+  const pct=d.progress_ms&&track.duration_ms?Math.round(d.progress_ms/track.duration_ms*100):0;
+  document.getElementById('spProgFill').style.width=pct+'%';
+  document.getElementById('spPos').textContent=spFmtTime(d.progress_ms);
+  document.getElementById('spDur').textContent=spFmtTime(track.duration_ms);
+
+  spCurrentUri=track.uri;
+}
+
+// ── Poll current playback ─────────────────────────────
+async function spPoll(){
+  const tok=await spGetToken();if(!tok)return;
+  try{
+    const r=await fetch(SP_API,{headers:{Authorization:'Bearer '+tok}});
+    if(r.status===200){const d=await r.json();spRenderTrack(d);}
+    else if(r.status===204){spRenderTrack(null);}
+  }catch(e){}
+}
+
+function spStartPolling(){
+  if(spPollTimer)clearInterval(spPollTimer);
+  spPoll();
+  spPollTimer=setInterval(spPoll,4000);
+}
+
+// ── Widget toggle ─────────────────────────────────────
+function toggleSpotifyWidget(){
+  spWidgetOpen=!spWidgetOpen;
+  const w=document.getElementById('spotifyWidget');
+  if(spWidgetOpen){
+    w.classList.add('visible');
+    if(!spToken){
+      document.getElementById('spConnectView').style.display='block';
+      document.getElementById('spTrackView').style.display='none';
+      document.getElementById('spNothing').style.display='none';
+    }
+  }else{
+    w.classList.remove('visible');
+  }
+}
+window.toggleSpotifyWidget=toggleSpotifyWidget;
+
+// ── Boot: restore session tokens + handle OAuth callback ─
+(function spBoot(){
+  // Restore from session
+  const storedToken=sessionStorage.getItem('sp_token');
+  const storedExpiry=parseInt(sessionStorage.getItem('sp_expiry')||'0');
+  const storedRefresh=sessionStorage.getItem('sp_refresh');
+  if(storedToken&&Date.now()<storedExpiry){
+    spToken=storedToken;spExpiry=storedExpiry;if(storedRefresh)spRefreshTok=storedRefresh;
+  }else if(storedRefresh){
+    spRefreshTok=storedRefresh;
+  }
+
+  // Check if returning from Spotify OAuth redirect
+  const params=new URLSearchParams(window.location.search);
+  const code=params.get('code');
+  const state=params.get('state');
+  if(code&&state==='spkce'){
+    // Wait for DOM/app to be ready then exchange
+    const tryExchange=()=>{
+      if(document.readyState==='complete'){spExchangeCode(code);}
+      else{window.addEventListener('load',()=>spExchangeCode(code),{once:true});}
+    };
+    tryExchange();
+    return;
+  }
+
+  // If we have a token, start polling once app is visible
+  if(spToken||spRefreshTok){
+    const waitForApp=()=>{
+      const btn=document.getElementById('spotifyBtn');
+      if(btn&&btn.classList.contains('visible')){spStartPolling();spRenderConnected();}
+      else{setTimeout(waitForApp,500);}
+    };
+    document.addEventListener('DOMContentLoaded',()=>setTimeout(waitForApp,1000));
+  }
+})();
 
 })();
 </script>
