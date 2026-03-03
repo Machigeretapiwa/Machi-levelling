@@ -1311,6 +1311,29 @@ function saveAriaKey(val){const k=val.trim();window.ARIA_KEY=k;sessionStorage.se
 function saveCurrentWeek(val){const w=parseInt(val);if(isNaN(w)||w<1||w>20)return;const d=loadData();d.currentWeek=w;d.viewingWeek=w;save(d);populateWeekSel();renderSkills(d);renderLicensePanel();}
 function clearAllData(){if(!confirm('RESET ALL DATA? This cannot be undone.'))return;_dataCache=dflt();saveRemote(_dataCache);render();}
 
+function resetXPOnly(){
+  if(!confirm('Reset ALL XP and levels? Task/weekly progress will be kept.')) return;
+  const d = loadData();
+  d.xp = {};
+  d.streaks = {};
+  d.streakDates = {};
+  save(d);
+  render();
+  renderXPGlobal();
+  showXPToast('XP RESET');
+}
+
+function resetStreaksOnly(){
+  if(!confirm('Reset all streaks only?')) return;
+  const d = loadData();
+  d.streaks = {};
+  d.streakDates = {};
+  save(d);
+  render();
+  renderXPGlobal();
+  showXPToast('STREAKS RESET');
+}
+
 // ════════════════════════════════════════════════════
 // RANK UP
 // ════════════════════════════════════════════════════
@@ -1436,6 +1459,14 @@ function renderXPGlobal(){
       <div style="display:grid;gap:8px">
         ${[{days:3,reward:'+20 bonus XP per objective',icon:'⚡'},{days:7,reward:'+75 bonus XP + 🔥 FIRE badge',icon:'🔥'},{days:14,reward:'+150 bonus XP + rank-up sound',icon:'💥'},{days:30,reward:'+300 bonus XP + LEGENDARY status',icon:'👑'}].map(r=>`<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--panel2);border:1px solid var(--border)"><span style="font-size:16px">${r.icon}</span><span style="font-family:Orbitron,sans-serif;font-size:9px;color:var(--gold);letter-spacing:2px">${r.days}-DAY STREAK</span><span style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--text-dim);margin-left:auto">${r.reward}</span></div>`).join('')}
       </div>
+    </div>
+    <div style="margin-top:32px;padding-top:24px;border-top:1px solid var(--border)">
+      <div style="font-family:Share Tech Mono,monospace;font-size:10px;color:var(--text-dim);letter-spacing:2px;margin-bottom:16px">DANGER ZONE</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <button onclick="resetXPOnly()" style="background:none;border:1px solid rgba(255,51,85,0.3);color:rgba(255,51,85,0.5);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;padding:10px 20px;cursor:pointer;transition:all 0.2s;" onmouseenter="this.style.borderColor='var(--red)';this.style.color='var(--red)'" onmouseleave="this.style.borderColor='rgba(255,51,85,0.3)';this.style.color='rgba(255,51,85,0.5)'>RESET XP &amp; LEVELS</button>
+        <button onclick="resetStreaksOnly()" style="background:none;border:1px solid rgba(255,51,85,0.3);color:rgba(255,51,85,0.5);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;padding:10px 20px;cursor:pointer;transition:all 0.2s;" onmouseenter="this.style.borderColor='var(--red)';this.style.color='var(--red)'" onmouseleave="this.style.borderColor='rgba(255,51,85,0.3)';this.style.color='rgba(255,51,85,0.5)'>RESET STREAKS ONLY</button>
+      </div>
+      <div style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:1px;opacity:0.6">XP reset zeros all skill levels. Task/weekly progress is preserved.</div>
     </div>`;
 }
 
@@ -1581,7 +1612,7 @@ async function sendChat(){
       parts: [{text: m.content}]
     }));
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
       {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
