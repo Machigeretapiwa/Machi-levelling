@@ -44,14 +44,17 @@ onAuthStateChanged(auth, user => {
     document.getElementById('loginScreen').classList.remove('show');
     const sob = document.getElementById('signOutBtn');
     if (sob) { sob.style.display = 'flex'; sob.querySelector('.sob-name').textContent = user.displayName || user.email; }
-    // Boot: load data then reveal start screen
+    // Boot: load data then reveal start screen or name screen
     if (typeof initApp === 'function') {
       initApp().then(() => {
-        const ss = document.getElementById('startScreen');
-        if (_dataCache && _dataCache.playerName && _dataCache.playerName !== 'PLAYER') {
-          ss.classList.add('continue-mode');
+        // New user — show name entry
+        if (!_dataCache || !_dataCache.playerName || _dataCache.playerName === 'PLAYER') {
+          document.getElementById('nameScreen').classList.add('show');
+        } else {
+          const ss = document.getElementById('startScreen');
+          if (_dataCache.playerName && _dataCache.playerName !== 'PLAYER') ss.classList.add('continue-mode');
+          ss.classList.add('show');
         }
-        ss.classList.add('show');
       });
     }
   } else {
@@ -62,6 +65,7 @@ onAuthStateChanged(auth, user => {
     document.getElementById('returnBtn').style.display = 'none';
     document.getElementById('licensePanel').classList.remove('visible');
     document.getElementById('chatBtn').classList.remove('visible');
+    document.getElementById('nameScreen').classList.remove('show');
     const sob = document.getElementById('signOutBtn');
     if (sob) sob.style.display = 'none';
     document.getElementById('loginScreen').classList.add('show');
@@ -429,6 +433,89 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 ::-webkit-scrollbar-track{background:var(--bg);}
 ::-webkit-scrollbar-thumb{background:var(--border-glow);}
 
+/* ── NAME ENTRY SCREEN ── */
+#nameScreen{position:fixed;inset:0;z-index:1002;background:#000;display:none;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;}
+#nameScreen.show{display:flex;}
+.ne-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 40%,rgba(10,132,255,0.09) 0%,transparent 65%);}
+.ne-ring{position:absolute;border-radius:50%;border:1px solid rgba(10,132,255,0.1);animation:ringPulse 3s ease-in-out infinite;}
+.ne-ring:nth-child(2){width:320px;height:320px;}.ne-ring:nth-child(3){width:520px;height:520px;animation-delay:1s;border-color:rgba(10,132,255,0.05);}
+.ne-content{position:relative;z-index:2;text-align:center;padding:40px 24px;width:100%;max-width:460px;}
+.ne-eyebrow{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:8px;color:var(--blue);margin-bottom:16px;opacity:0;animation:fadeUp 0.6s 0.3s forwards;}
+.ne-title{font-family:'Orbitron',sans-serif;font-size:clamp(22px,4vw,38px);font-weight:900;letter-spacing:4px;color:var(--white);text-shadow:0 0 40px rgba(10,132,255,0.6);opacity:0;animation:fadeUp 0.6s 0.6s forwards;}
+.ne-sub{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--text-dim);margin-top:10px;opacity:0;animation:fadeUp 0.6s 0.9s forwards;}
+.ne-input-wrap{margin-top:40px;opacity:0;animation:fadeUp 0.6s 1.2s forwards;}
+.ne-input{width:100%;background:rgba(10,132,255,0.06);border:1px solid var(--border-glow);color:var(--white);font-family:'Orbitron',sans-serif;font-size:18px;letter-spacing:3px;padding:16px 20px;outline:none;text-align:center;transition:border-color 0.2s,box-shadow 0.2s;}
+.ne-input:focus{border-color:var(--blue);box-shadow:0 0 24px rgba(10,132,255,0.2);}
+.ne-input::placeholder{color:var(--text-dim);font-size:13px;letter-spacing:2px;}
+.ne-btn{margin-top:20px;width:100%;background:rgba(10,132,255,0.12);border:1px solid var(--blue);color:var(--blue-bright);font-family:'Orbitron',sans-serif;font-size:12px;letter-spacing:3px;padding:14px;cursor:pointer;transition:all 0.25s;}
+.ne-btn:hover{background:rgba(10,132,255,0.22);box-shadow:0 0 24px rgba(10,132,255,0.3);}
+.ne-err{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--red);margin-top:10px;min-height:16px;letter-spacing:1px;}
+
+/* ── XP & STREAK SYSTEM ── */
+.xp-system-bar{padding:4px 20px 10px;display:flex;align-items:center;gap:12px;}
+.xp-lv-badge{font-family:'Orbitron',sans-serif;font-size:9px;font-weight:900;letter-spacing:2px;padding:3px 8px;border:1px solid var(--card-color,var(--blue));color:var(--card-color,var(--blue));flex-shrink:0;}
+.xp-prog-wrap{flex:1;}
+.xp-prog-row{display:flex;justify-content:space-between;font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--text-dim);margin-bottom:3px;}
+.xp-prog-bg{height:3px;background:rgba(255,255,255,0.05);overflow:hidden;}
+.xp-prog-fill{height:100%;background:linear-gradient(90deg,var(--card-color,var(--blue)),color-mix(in srgb,var(--card-color,var(--blue)) 60%,white));transition:width 0.8s cubic-bezier(0.4,0,0.2,1);}
+.xp-streak{font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--gold);letter-spacing:1px;display:flex;align-items:center;gap:4px;flex-shrink:0;}
+
+/* ── WEEKLY COMPLETE ANIMATION ── */
+@keyframes woComplete{0%{transform:scale(1);}40%{transform:scale(1.04);}100%{transform:scale(1);}}
+@keyframes woPulse{0%,100%{box-shadow:0 0 0 rgba(255,215,0,0);}50%{box-shadow:0 0 18px rgba(255,215,0,0.45);}}
+.weekly-section.all-done{animation:woPulse 1.8s ease-in-out 3;}
+@keyframes objDone{0%{opacity:1;transform:translateX(0);}30%{transform:translateX(4px);}100%{opacity:1;transform:translateX(0);}}
+.wobj-item.just-done{animation:objDone 0.35s ease;}
+
+/* ── WEEKLY COMPLETE BURST ── */
+#wkCompleteBurst{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.7);z-index:700;pointer-events:none;opacity:0;transition:all 0.35s;text-align:center;}
+#wkCompleteBurst.show{opacity:1;transform:translate(-50%,-50%) scale(1);}
+.wcb-inner{background:var(--panel);border:1px solid var(--gold);padding:28px 48px;box-shadow:0 0 60px rgba(255,215,0,0.35);}
+.wcb-title{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:4px;color:var(--text-dim);margin-bottom:8px;}
+.wcb-text{font-family:'Orbitron',sans-serif;font-size:22px;font-weight:900;color:var(--gold);text-shadow:0 0 20px rgba(255,215,0,0.7);letter-spacing:2px;}
+.wcb-sub{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim);margin-top:8px;letter-spacing:1px;}
+
+/* ── XP REWARD TOAST ── */
+#xpToast{position:fixed;bottom:90px;right:28px;z-index:700;pointer-events:none;opacity:0;transform:translateY(10px);transition:all 0.3s;}
+#xpToast.show{opacity:1;transform:translateY(0);}
+.xpt-inner{background:var(--panel);border:1px solid var(--cyan);padding:10px 18px;display:flex;align-items:center;gap:10px;box-shadow:0 0 24px rgba(0,229,255,0.2);}
+.xpt-icon{font-size:18px;}
+.xpt-txt{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--cyan);letter-spacing:1px;}
+
+/* ── SEMESTER MODAL WEEKS FIELD ── */
+.sem-weeks-note{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim);margin-top:4px;letter-spacing:1px;}
+
+/* ── SKILL MODAL — WEEKLY OBJECTIVES BUILDER ── */
+.wo-builder-wrap{border:1px solid var(--border);background:rgba(255,255,255,0.02);padding:12px;}
+.wo-week-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.wo-week-label{font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:2px;color:var(--gold);flex-shrink:0;width:60px;}
+.wo-objs-wrap{flex:1;display:flex;flex-direction:column;gap:4px;}
+.wo-obj-input{background:rgba(255,255,255,0.03);border:1px solid var(--border);color:var(--white);font-family:'Rajdhani',sans-serif;font-size:12px;padding:5px 8px;outline:none;width:100%;transition:border-color 0.15s;}
+.wo-obj-input:focus{border-color:var(--gold);}
+.wo-add-obj{background:none;border:none;color:rgba(255,215,0,0.35);font-size:16px;cursor:pointer;padding:0 4px;transition:color 0.2s;flex-shrink:0;}
+.wo-add-obj:hover{color:var(--gold);}
+.wo-rm-obj{background:none;border:none;color:rgba(255,51,85,0.3);font-size:12px;cursor:pointer;padding:2px;transition:color 0.2s;flex-shrink:0;}
+.wo-rm-obj:hover{color:var(--red);}
+.wo-week-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px;}
+.wo-tab{background:none;border:1px solid var(--border);color:var(--text-dim);font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;padding:4px 10px;cursor:pointer;transition:all 0.2s;}
+.wo-tab.active{border-color:var(--gold);color:var(--gold);background:rgba(255,215,0,0.06);}
+
+/* ── GLOBAL XP PANEL (in stats) ── */
+.xp-global-wrap{margin-top:32px;padding-top:24px;border-top:1px solid var(--border);}
+.xp-global-wrap h2{font-family:'Orbitron',sans-serif;font-size:14px;letter-spacing:3px;color:var(--cyan);margin-bottom:20px;display:flex;align-items:center;gap:16px;}
+.xp-global-wrap h2::after{content:'';flex:1;height:1px;background:var(--border);}
+.xp-skill-rows{display:grid;gap:10px;}
+.xp-sk-row{background:var(--panel2);border:1px solid var(--border);padding:14px 16px;display:flex;align-items:center;gap:14px;}
+.xp-sk-icon{font-size:20px;flex-shrink:0;}
+.xp-sk-info{flex:1;}
+.xp-sk-name{font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:1px;color:var(--white);margin-bottom:4px;}
+.xp-sk-bar-bg{height:4px;background:rgba(255,255,255,0.05);overflow:hidden;}
+.xp-sk-bar-fill{height:100%;transition:width 0.9s cubic-bezier(0.4,0,0.2,1);}
+.xp-sk-meta{display:flex;justify-content:space-between;margin-top:4px;}
+.xp-sk-lv{font-family:'Orbitron',sans-serif;font-size:9px;font-weight:900;color:var(--cyan);}
+.xp-sk-pts{font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--text-dim);}
+.xp-sk-streak{font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--gold);}
+
 @media(max-width:600px){
   .skills-grid{grid-template-columns:1fr;}
   .stats-grid{grid-template-columns:1fr 1fr;}
@@ -444,6 +531,39 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 </head>
 <body>
 <canvas id="particles"></canvas>
+
+<!-- ═══ NAME ENTRY SCREEN ═══ -->
+<div id="nameScreen">
+  <div class="ne-bg"></div>
+  <div class="ne-ring"></div><div class="ne-ring"></div>
+  <div class="ne-content">
+    <div class="ne-eyebrow">[ S Y S T E M ]</div>
+    <div class="ne-title">IDENTIFY YOURSELF</div>
+    <div class="ne-sub">ENTER YOUR NAME TO INITIALISE YOUR SYSTEM PROFILE</div>
+    <div class="ne-input-wrap">
+      <input class="ne-input" id="nameEntryInput" placeholder="YOUR NAME" maxlength="24" onkeydown="if(event.key==='Enter')confirmName()">
+      <button class="ne-btn" onclick="confirmName()">INITIALISE SYSTEM ▶</button>
+      <div class="ne-err" id="nameEntryErr"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ WEEKLY COMPLETE BURST ═══ -->
+<div id="wkCompleteBurst">
+  <div class="wcb-inner">
+    <div class="wcb-title">WEEKLY OBJECTIVES</div>
+    <div class="wcb-text">ALL COMPLETE ✦</div>
+    <div class="wcb-sub" id="wcbSub">PYTHON PROGRAMMING · WEEK 3</div>
+  </div>
+</div>
+
+<!-- ═══ XP TOAST ═══ -->
+<div id="xpToast">
+  <div class="xpt-inner">
+    <div class="xpt-icon">⚡</div>
+    <div class="xpt-txt" id="xpToastTxt">+50 XP</div>
+  </div>
+</div>
 
 <!-- ═══ LOGIN SCREEN ═══ -->
 <div id="loginScreen">
@@ -525,6 +645,7 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
     <nav class="nav">
       <button class="nav-btn active" onclick="switchView('skills',this)">SKILLS</button>
       <button class="nav-btn" onclick="switchView('stats',this)">STATISTICS</button>
+      <button class="nav-btn" onclick="switchView('xp',this)">⚡ XP & STREAKS</button>
       <button class="nav-btn" onclick="switchView('settings',this)">SETTINGS</button>
     </nav>
 
@@ -559,6 +680,11 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
           <div class="threshold-row" style="--g-color:var(--ruby)"><div class="thresh-grade">🔴 SPECIAL GRADE</div><div class="thresh-pct">90–100%</div><div class="thresh-bar-bg"><div class="thresh-bar-fill" style="width:100%;background:var(--ruby)"></div></div><div class="thresh-desc">Way beyond all targets</div></div>
         </div>
       </div>
+    </div>
+
+    <!-- XP & STREAKS VIEW -->
+    <div id="view-xp" class="view">
+      <div id="xpGlobalPanel"></div>
     </div>
 
     <!-- SETTINGS VIEW -->
@@ -618,7 +744,7 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 
 <!-- ═══ SKILL MODAL ═══ -->
 <div class="modal-overlay hidden" id="skillModal">
-  <div class="modal">
+  <div class="modal" style="max-width:600px;">
     <h2 id="modalTitle">REGISTER NEW SKILL</h2>
     <div class="form-group"><label class="form-label">SKILL NAME</label><input class="form-input" id="skillName" placeholder="e.g. Python Programming"></div>
     <div class="form-group"><label class="form-label">CATEGORY / SUBTITLE</label><input class="form-input" id="skillCategory" placeholder="e.g. Coding · Year 1"></div>
@@ -631,6 +757,11 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
       </select>
     </div>
     <div class="form-group"><label class="form-label">TASKS / PROOF ITEMS</label><div id="tasksBuilder"></div><button class="add-task-btn" onclick="addTaskRow()">+ ADD TASK</button></div>
+    <div class="form-group">
+      <label class="form-label">WEEKLY OBJECTIVES <span style="color:var(--text-dim);font-size:8px;letter-spacing:1px">(OPTIONAL — SET PER WEEK)</span></label>
+      <div class="wo-week-tabs" id="woWeekTabs"></div>
+      <div class="wo-builder-wrap" id="woBuilder"><div style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--text-dim);letter-spacing:1px">CLICK A WEEK TAB ABOVE TO ADD OBJECTIVES</div></div>
+    </div>
     <div class="form-group"><label class="form-label">PROOF OF COMPLETION</label><textarea class="form-textarea" id="skillProofDesc" placeholder="What counts as proof this skill is acquired?"></textarea></div>
     <div class="modal-actions"><button class="btn-cancel" onclick="closeModal()">CANCEL</button><button class="btn-primary" onclick="saveSkill()">CONFIRM</button></div>
   </div>
@@ -641,7 +772,8 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
   <div class="modal">
     <h2>NEW SEMESTER</h2>
     <div class="form-group"><label class="form-label">SEMESTER NAME</label><input class="form-input" id="newSemName" placeholder="e.g. Semester 2, 2026"></div>
-    <div class="form-group"><label class="form-label">STARTING WEEK</label><input class="form-input" id="newSemWeek" type="number" min="1" max="20" value="1"></div>
+    <div class="form-group"><label class="form-label">STARTING WEEK</label><input class="form-input" id="newSemWeek" type="number" min="1" max="52" value="1"></div>
+    <div class="form-group"><label class="form-label">TOTAL WEEKS</label><input class="form-input" id="newSemTotalWeeks" type="number" min="1" max="52" value="13"><div class="sem-weeks-note">Sets the range of selectable weeks for this semester</div></div>
     <div class="modal-actions"><button class="btn-cancel" onclick="document.getElementById('semesterModal').classList.add('hidden')">CANCEL</button><button class="btn-primary" onclick="createNewSemester()">CREATE</button></div>
   </div>
 </div>
@@ -775,7 +907,7 @@ async function saveRemote(data) {
 function loadData() { return _dataCache || dflt(); }
 function save(data) { _dataCache = data; saveRemote(data); /* fire-and-forget */ }
 
-function dflt(){const id='sem_s1_2026';return{playerName:'PLAYER',currentSemester:id,currentWeek:3,viewingWeek:3,semesters:{[id]:{name:'Semester 1, 2026',skills:defaultSkills()}}};}
+function dflt(){const id='sem_s1_2026';return{playerName:'PLAYER',currentSemester:id,currentWeek:3,viewingWeek:3,xp:{},semesters:{[id]:{name:'Semester 1, 2026',totalWeeks:13,skills:defaultSkills()}}};}
 
 // ── Auth helpers ──────────────────────────────────────
 async function loginWithGoogle() {
@@ -903,9 +1035,11 @@ const WO={
 // ════════════════════════════════════════════════════
 function populateWeekSel(){
   const data=loadData(),cur=data.currentWeek||3,view=data.viewingWeek||cur;
+  const sem=data.semesters[data.currentSemester];
+  const totalWeeks=(sem&&sem.totalWeeks)||13;
   const sel=document.getElementById('weekSelect');
   sel.innerHTML='';
-  for(let w=1;w<=14;w++){const o=document.createElement('option');o.value=w;o.textContent='WEEK '+w+(w===cur?' ★':'');o.selected=(w===view);sel.appendChild(o);}
+  for(let w=1;w<=totalWeeks;w++){const o=document.createElement('option');o.value=w;o.textContent='WEEK '+w+(w===cur?' ★':'');o.selected=(w===view);sel.appendChild(o);}
   document.getElementById('curWeekBadge').style.opacity=(view===cur)?'1':'0.3';
 }
 function onWeekChange(v){const data=loadData();data.viewingWeek=parseInt(v);save(data);document.getElementById('curWeekBadge').style.opacity=(parseInt(v)===(data.currentWeek||3))?'1':'0.3';renderSkills(data);}
@@ -982,18 +1116,25 @@ function renderSkills(data){
 function card(sk,week,cw,data){
   const p=pct(sk,cw),grade=getGrade(p);
   const playerName=(data.playerName||'PLAYER').toUpperCase();
-  const objs=(WO[sk.id]||{})[week]||[];
+  // Combine built-in and custom weekly objectives
+  const builtInObjs=(WO[sk.id]||{})[week]||[];
+  const customObjs=(sk.weeklyObjectives&&sk.weeklyObjectives[week])||[];
+  const objs=[...builtInObjs,...customObjs];
   const wkDone=(sk.weeklyDone||{})[week]||[];
+  const allObjsDone=objs.length>0&&wkDone.length>=objs.length;
   const weeklyHTML=objs.length
-    ?`<div class="weekly-section"><div class="weekly-header"><div class="weekly-tag">⚡ WEEK ${week} OBJECTIVES</div><div class="weekly-count">${wkDone.length}/${objs.length} DONE</div></div><div class="weekly-obj-list">${objs.map((obj,i)=>{const d=wkDone.includes(i);return`<div class="wobj-item ${d?'done':''}" onclick="toggleWobj('${sk.id}',${week},${i})"><div class="wobj-check ${d?'done':''}"></div><span class="wobj-text">${obj}</span></div>`;}).join('')}</div></div>`
+    ?`<div class="weekly-section${allObjsDone?' all-done':''}"><div class="weekly-header"><div class="weekly-tag">⚡ WEEK ${week} OBJECTIVES</div><div class="weekly-count">${Math.min(wkDone.length,objs.length)}/${objs.length} DONE${allObjsDone?' ✦':''}</div></div><div class="weekly-obj-list">${objs.map((obj,i)=>{const d=wkDone.includes(i);return`<div class="wobj-item ${d?'done':''}" onclick="toggleWobj('${sk.id}',${week},${i})"><div class="wobj-check ${d?'done':''}"></div><span class="wobj-text">${obj}</span></div>`;}).join('')}</div></div>`
     :`<div class="weekly-section"><div class="no-weekly">NO OBJECTIVES FOR WEEK ${week}</div></div>`;
-  const woMap=WO[sk.id]||{};let tot=0,don=0;
-  for(let w=1;w<=cw;w++){tot+=(woMap[w]||[]).length;don+=((sk.weeklyDone||{})[w]||[]).length;}
+  const woMap=WO[sk.id]||{};const customWO=sk.weeklyObjectives||{};let tot=0,don=0;
+  for(let w=1;w<=cw;w++){const all=(woMap[w]||[]).concat(customWO[w]||[]);tot+=all.length;don+=((sk.weeklyDone||{})[w]||[]).length;}
   const ts=sk.tasks.length?Math.round(sk.tasks.filter(t=>t.done).length/sk.tasks.length*100):0;
   const ws=tot>0?Math.round(don/tot*100):null;
   const detail=ws!==null?`TASKS ${ts}% · WEEKLY ${ws}%`:'OVERALL PROGRESS';
   const taskRows=sk.tasks.map(t=>`<div class="task-item ${t.done?'done':''}" onclick="toggleTask('${sk.id}','${t.id}')"><div class="task-check ${t.done?'done':''}"></div><span class="task-text">${t.text}</span></div>`).join('');
   const slbStyle=`--slb-bg:${grade.licClass==='lic-ruby'?'rgba(204,34,68,0.12)':grade.licClass==='lic-gold'?'rgba(212,168,32,0.1)':grade.licClass==='lic-silver'?'rgba(176,184,200,0.1)':grade.licClass==='lic-bronze'?'rgba(205,127,50,0.1)':'rgba(96,112,128,0.1)'};--slb-border:${grade.licClass==='lic-ruby'?'rgba(204,34,68,0.25)':grade.licClass==='lic-gold'?'rgba(212,168,32,0.25)':grade.licClass==='lic-silver'?'rgba(176,184,200,0.2)':grade.licClass==='lic-bronze'?'rgba(205,127,50,0.2)':'rgba(96,112,128,0.18)'};--slb-color:${grade.color};--slb-glow:${grade.color}`;
+  // XP bar
+  const skXP=getSkillXP(sk.id);const lvData=getLevelFromXP(skXP);const streak=(data.streaks&&data.streaks[sk.id])||0;
+  const xpPct=lvData.needed>0?Math.round(lvData.current/lvData.needed*100):100;
   return`<div class="skill-card ${p>=90?'special-grade':''}" style="--card-color:${sk.color}">
     <button class="card-del" onclick="delSkill(event,'${sk.id}')">✕</button>
     <div class="card-header" onclick="openEditSkillModal('${sk.id}')">
@@ -1004,6 +1145,14 @@ function card(sk,week,cw,data){
     <div class="xp-section">
       <div class="xp-labels"><span>${detail}</span><span class="pct-text" style="color:${grade.color}">${p}%</span></div>
       <div class="xp-bar-bg"><div class="xp-bar-fill" style="width:${p}%"></div></div>
+    </div>
+    <div class="xp-system-bar">
+      <div class="xp-lv-badge">LV ${lvData.level}</div>
+      <div class="xp-prog-wrap">
+        <div class="xp-prog-row"><span>XP</span><span>${lvData.current}/${lvData.needed}</span></div>
+        <div class="xp-prog-bg"><div class="xp-prog-fill" style="width:${xpPct}%;background:${sk.color||'var(--blue)'}"></div></div>
+      </div>
+      ${streak>0?`<div class="xp-streak">🔥 ${streak}d</div>`:''}
     </div>
     ${weeklyHTML}
     ${sk.tasks.length?`<div class="tasks-section"><button class="tasks-toggle" onclick="toggleTasks(this)">▸ ALL TASKS (${sk.tasks.filter(t=>t.done).length}/${sk.tasks.length})</button><div class="tasks-inner">${taskRows}</div></div>`:''}
@@ -1042,16 +1191,41 @@ function toggleWobj(skillId,week,idx){
   if(!sk.weeklyDone)sk.weeklyDone={};
   if(!sk.weeklyDone[week])sk.weeklyDone[week]=[];
   const a=sk.weeklyDone[week],pos=a.indexOf(idx);
-  if(pos===-1)a.push(idx);else a.splice(pos,1);
-  save(data);renderSkills(data);renderLicensePanel();
+  const wasCompleting=(pos===-1);
+  if(wasCompleting)a.push(idx);else a.splice(pos,1);
+  save(data);
+
+  // XP & streak for completing an objective
+  if(wasCompleting){
+    const streak=updateStreak(skillId);
+    let xpGain=XP_PER_WOBJ;
+    // streak bonus
+    const streakBonus=XP_STREAK_BONUS[Math.min(streak,XP_STREAK_BONUS.length-1)]||0;
+    xpGain+=streakBonus;
+    awardXP(skillId,xpGain,streakBonus>0?'🔥 STREAK BONUS':'');
+
+    // Check if ALL objectives for this week are now done
+    const woMap=WO[sk.id]||{};
+    const customWO=sk.weeklyObjectives||{};
+    const allObjs=(woMap[week]||[]).concat(customWO[week]||[]);
+    const freshDone=(loadData().semesters[data.currentSemester].skills.find(s=>s.id===skillId)?.weeklyDone||{})[week]||[];
+    if(allObjs.length>0&&freshDone.length>=allObjs.length){
+      awardXP(skillId,XP_WOBJ_ALL_BONUS,'WEEK COMPLETE');
+      setTimeout(()=>showWeeklyCompleteBurst(sk.name,week),200);
+    }
+  }
+  renderSkills(loadData());renderLicensePanel();
 }
 function toggleTask(skillId,taskId){
   const data=loadData(),sem=data.semesters[data.currentSemester];
   const sk=sem.skills.find(s=>s.id===skillId);if(!sk)return;
   const cw=data.currentWeek||3,prev=getGrade(pct(sk,cw));
-  const t=sk.tasks.find(t=>t.id===taskId);if(t)t.done=!t.done;
+  const t=sk.tasks.find(t=>t.id===taskId);
+  const wasCompleting=t&&!t.done;
+  if(t)t.done=!t.done;
   const nw=getGrade(pct(sk,cw));save(data);renderSkills(data);renderLicensePanel();
   if(nw.rank>prev.rank)showRankUp(nw.label,sk.name);
+  if(wasCompleting)awardXP(skillId,XP_PER_TASK,'TASK DONE');
 }
 function saveProof(skillId,val){const data=loadData(),sem=data.semesters[data.currentSemester];const sk=sem.skills.find(s=>s.id===skillId);if(sk){sk.proofNote=val;save(data);}}
 
@@ -1059,15 +1233,45 @@ function saveProof(skillId,val){const data=loadData(),sem=data.semesters[data.cu
 // SKILL MODAL
 // ════════════════════════════════════════════════════
 let editId=null;
-function openAddSkillModal(){editId=null;document.getElementById('modalTitle').textContent='REGISTER NEW SKILL';['skillName','skillCategory','skillIcon','skillProofDesc'].forEach(id=>document.getElementById(id).value='');document.getElementById('skillColor').value='var(--blue)';document.getElementById('tasksBuilder').innerHTML='';addTaskRow();addTaskRow();addTaskRow();document.getElementById('skillModal').classList.remove('hidden');}
-function openEditSkillModal(skillId){const data=loadData(),sk=data.semesters[data.currentSemester].skills.find(s=>s.id===skillId);if(!sk)return;editId=skillId;document.getElementById('modalTitle').textContent='EDIT SKILL';document.getElementById('skillName').value=sk.name;document.getElementById('skillCategory').value=sk.category||'';document.getElementById('skillIcon').value=sk.icon||'';document.getElementById('skillColor').value=sk.color||'var(--blue)';document.getElementById('skillProofDesc').value=sk.proofDesc||'';document.getElementById('tasksBuilder').innerHTML='';sk.tasks.forEach(t=>addTaskRow(t.text));document.getElementById('skillModal').classList.remove('hidden');}
+function openAddSkillModal(){
+  editId=null;
+  document.getElementById('modalTitle').textContent='REGISTER NEW SKILL';
+  ['skillName','skillCategory','skillIcon','skillProofDesc'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('skillColor').value='var(--blue)';
+  document.getElementById('tasksBuilder').innerHTML='';
+  addTaskRow();addTaskRow();addTaskRow();
+  const data=loadData();const sem=data.semesters[data.currentSemester];const tw=(sem&&sem.totalWeeks)||13;
+  initWOBuilder({},tw);
+  document.getElementById('skillModal').classList.remove('hidden');
+}
+function openEditSkillModal(skillId){
+  const data=loadData(),sk=data.semesters[data.currentSemester].skills.find(s=>s.id===skillId);
+  if(!sk)return;editId=skillId;
+  document.getElementById('modalTitle').textContent='EDIT SKILL';
+  document.getElementById('skillName').value=sk.name;
+  document.getElementById('skillCategory').value=sk.category||'';
+  document.getElementById('skillIcon').value=sk.icon||'';
+  document.getElementById('skillColor').value=sk.color||'var(--blue)';
+  document.getElementById('skillProofDesc').value=sk.proofDesc||'';
+  document.getElementById('tasksBuilder').innerHTML='';
+  sk.tasks.forEach(t=>addTaskRow(t.text));
+  const sem=data.semesters[data.currentSemester];const tw=(sem&&sem.totalWeeks)||13;
+  initWOBuilder(sk.weeklyObjectives||{},tw);
+  document.getElementById('skillModal').classList.remove('hidden');
+}
 function addTaskRow(v=''){const d=document.createElement('div');d.className='task-row';d.innerHTML=`<input type="text" placeholder="Task description..." value="${v.replace(/"/g,'&quot;')}"><button class="rm-btn" onclick="this.parentElement.remove()">✕</button>`;document.getElementById('tasksBuilder').appendChild(d);}
 function saveSkill(){
   const name=document.getElementById('skillName').value.trim();if(!name)return;
   const data=loadData(),sem=data.semesters[data.currentSemester];
   const tasks=Array.from(document.querySelectorAll('#tasksBuilder .task-row input')).map(i=>i.value.trim()).filter(Boolean).map((text,i)=>({id:'t'+(i+1),text,done:false}));
-  if(editId){const sk=sem.skills.find(s=>s.id===editId);if(sk){const dm={};sk.tasks.forEach(t=>{dm[t.text]=t.done;});Object.assign(sk,{name,category:document.getElementById('skillCategory').value.trim(),icon:document.getElementById('skillIcon').value.trim()||'⬡',color:document.getElementById('skillColor').value,proofDesc:document.getElementById('skillProofDesc').value.trim()});sk.tasks=tasks.map(t=>({...t,done:dm[t.text]||false}));}}
-  else{sem.skills.push({id:'sk_'+Date.now(),name,category:document.getElementById('skillCategory').value.trim(),icon:document.getElementById('skillIcon').value.trim()||'⬡',color:document.getElementById('skillColor').value,proofDesc:document.getElementById('skillProofDesc').value.trim(),proofNote:'',weeklyDone:{},tasks});}
+  const cleanWO={};
+  Object.entries(_woData).forEach(([w,objs])=>{const f=objs.filter(o=>o&&o.trim());if(f.length)cleanWO[parseInt(w)]=f;});
+  if(editId){
+    const sk=sem.skills.find(s=>s.id===editId);
+    if(sk){const dm={};sk.tasks.forEach(t=>{dm[t.text]=t.done;});Object.assign(sk,{name,category:document.getElementById('skillCategory').value.trim(),icon:document.getElementById('skillIcon').value.trim()||'⬡',color:document.getElementById('skillColor').value,proofDesc:document.getElementById('skillProofDesc').value.trim(),weeklyObjectives:cleanWO});sk.tasks=tasks.map(t=>({...t,done:dm[t.text]||false}));}
+  } else {
+    sem.skills.push({id:'sk_'+Date.now(),name,category:document.getElementById('skillCategory').value.trim(),icon:document.getElementById('skillIcon').value.trim()||'⬡',color:document.getElementById('skillColor').value,proofDesc:document.getElementById('skillProofDesc').value.trim(),weeklyObjectives:cleanWO,proofNote:'',weeklyDone:{},tasks});
+  }
   save(data);closeModal();render();
 }
 function delSkill(e,id){e.stopPropagation();if(!confirm('Remove this skill?'))return;const data=loadData();data.semesters[data.currentSemester].skills=data.semesters[data.currentSemester].skills.filter(s=>s.id!==id);save(data);render();}
@@ -1076,9 +1280,9 @@ function closeModal(){document.getElementById('skillModal').classList.add('hidde
 // ════════════════════════════════════════════════════
 // SEMESTER
 // ════════════════════════════════════════════════════
-function switchSemester(id){const d=loadData();d.currentSemester=id;save(d);render();}
-function openNewSemesterModal(){document.getElementById('newSemName').value='';document.getElementById('semesterModal').classList.remove('hidden');}
-function createNewSemester(){const name=document.getElementById('newSemName').value.trim();if(!name)return;const d=loadData(),id='sem_'+Date.now();d.semesters[id]={name,skills:[]};d.currentSemester=id;d.currentWeek=parseInt(document.getElementById('newSemWeek').value)||1;d.viewingWeek=d.currentWeek;save(d);document.getElementById('semesterModal').classList.add('hidden');render();}
+function switchSemester(id){const d=loadData();d.currentSemester=id;d.viewingWeek=d.currentWeek||1;save(d);render();}
+function openNewSemesterModal(){document.getElementById('newSemName').value='';document.getElementById('newSemWeek').value='1';document.getElementById('newSemTotalWeeks').value='13';document.getElementById('semesterModal').classList.remove('hidden');}
+function createNewSemester(){const name=document.getElementById('newSemName').value.trim();if(!name)return;const d=loadData(),id='sem_'+Date.now();const tw=parseInt(document.getElementById('newSemTotalWeeks').value)||13;const sw=parseInt(document.getElementById('newSemWeek').value)||1;d.semesters[id]={name,totalWeeks:tw,skills:[]};d.currentSemester=id;d.currentWeek=sw;d.viewingWeek=sw;save(d);document.getElementById('semesterModal').classList.add('hidden');render();}
 function deleteCurrentSemester(){const d=loadData(),keys=Object.keys(d.semesters);if(keys.length<=1){alert('Cannot delete the only semester.');return;}if(!confirm('Delete this semester and all its skills?'))return;delete d.semesters[d.currentSemester];d.currentSemester=Object.keys(d.semesters)[0];save(d);render();}
 function updateSemesterName(val){const d=loadData();if(d.semesters[d.currentSemester]){d.semesters[d.currentSemester].name=val;save(d);}document.getElementById('semesterBadgeDisplay').textContent=val.toUpperCase();const o=document.querySelector(`#semesterSelect option[value="${d.currentSemester}"]`);if(o)o.textContent=val;}
 
@@ -1108,20 +1312,186 @@ function switchView(view,btn){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('view-'+view).classList.add('active');btn.classList.add('active');
   if(view==='stats')renderStats(loadData(),loadData().semesters[loadData().currentSemester]);
+  if(view==='xp')renderXPGlobal();
+}
+// NAME ENTRY
+// ════════════════════════════════════════════════════
+function confirmName(){
+  const val=document.getElementById('nameEntryInput').value.trim();
+  const err=document.getElementById('nameEntryErr');
+  if(!val){err.textContent='NAME CANNOT BE EMPTY';return;}
+  if(val.length<2){err.textContent='NAME TOO SHORT';return;}
+  err.textContent='';
+  const d=loadData();d.playerName=val.toUpperCase();save(d);
+  const ns=document.getElementById('nameScreen');
+  ns.style.transition='opacity 0.6s';ns.style.opacity='0';
+  setTimeout(()=>{
+    ns.classList.remove('show');ns.style.opacity='';ns.style.transition='';
+    const ss=document.getElementById('startScreen');
+    ss.classList.remove('continue-mode');ss.classList.add('show');
+  },600);
 }
 
 // ════════════════════════════════════════════════════
-// AI CHATBOT (powered by Claude API)
+// XP SYSTEM
+// ════════════════════════════════════════════════════
+const XP_PER_TASK=30;
+const XP_PER_WOBJ=20;
+const XP_WOBJ_ALL_BONUS=50; // bonus for completing all weekly objs
+const XP_STREAK_BONUS=[0,0,10,20,30,50,75,100]; // extra xp at streak lengths
+
+function xpForLevel(lv){return lv<=1?0:100+((lv-1)*80);}
+function getLevelFromXP(xp){let lv=1,acc=0;while(acc+xpForLevel(lv+1)<=xp){acc+=xpForLevel(lv+1);lv++;}return{level:lv,current:xp-acc,needed:xpForLevel(lv+1)};}
+
+function getSkillXP(skillId){const d=loadData();return(d.xp&&d.xp[skillId])||0;}
+function getSkillStreak(skillId){const d=loadData();return(d.streaks&&d.streaks[skillId])||0;}
+
+function awardXP(skillId,amount,label){
+  const d=loadData();
+  if(!d.xp)d.xp={};
+  if(!d.streaks)d.streaks={};
+  const prev=d.xp[skillId]||0;
+  d.xp[skillId]=(prev+amount);
+  save(d);
+  showXPToast('+'+amount+' XP'+(label?' · '+label:''));
+}
+
+function updateStreak(skillId){
+  const d=loadData();
+  if(!d.streaks)d.streaks={};
+  if(!d.streakDates)d.streakDates={};
+  const today=new Date().toDateString();
+  const last=d.streakDates[skillId];
+  const yesterday=new Date(Date.now()-86400000).toDateString();
+  let streak=d.streaks[skillId]||0;
+  if(last===today){return streak;} // already logged today
+  if(last===yesterday||!last){streak++;}else{streak=1;}
+  d.streaks[skillId]=streak;d.streakDates[skillId]=today;
+  save(d);
+  return streak;
+}
+
+let _xpToastTimer=null;
+function showXPToast(msg){
+  const t=document.getElementById('xpToast'),txt=document.getElementById('xpToastTxt');
+  txt.textContent=msg;t.classList.add('show');
+  if(_xpToastTimer)clearTimeout(_xpToastTimer);
+  _xpToastTimer=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+function renderXPGlobal(){
+  const data=loadData(),sem=data.semesters[data.currentSemester];
+  const panel=document.getElementById('xpGlobalPanel');if(!panel)return;
+  if(!sem||!sem.skills.length){panel.innerHTML='<div style="text-align:center;padding:80px 20px;color:var(--text-dim);font-family:Share Tech Mono,monospace;font-size:12px;letter-spacing:1px">NO SKILLS REGISTERED YET</div>';return;}
+  const cw=data.currentWeek||3;
+  // Total XP summary
+  const totalXP=Object.values(data.xp||{}).reduce((s,v)=>s+v,0);
+  const tl=getLevelFromXP(totalXP);
+  const allStreaks=Object.values(data.streaks||{});
+  const maxStreak=allStreaks.length?Math.max(...allStreaks):0;
+  panel.innerHTML=`
+    <div class="stats-grid" style="margin-bottom:32px">
+      <div class="stat-card" style="--card-color:var(--cyan)"><div class="stat-num" style="color:var(--cyan)">${totalXP}</div><div class="stat-label">TOTAL XP EARNED</div></div>
+      <div class="stat-card" style="--card-color:var(--blue)"><div class="stat-num" style="color:var(--blue)">LV ${tl.level}</div><div class="stat-label">OVERALL SYSTEM LEVEL</div></div>
+      <div class="stat-card" style="--card-color:var(--gold)"><div class="stat-num" style="color:var(--gold)">${maxStreak}</div><div class="stat-label">LONGEST ACTIVE STREAK</div></div>
+    </div>
+    <div class="xp-global-wrap">
+      <h2>SKILL XP & STREAKS</h2>
+      <div class="xp-skill-rows">${sem.skills.map(sk=>{
+        const xp=getSkillXP(sk.id);const lv=getLevelFromXP(xp);const streak=(data.streaks&&data.streaks[sk.id])||0;
+        const pct2=Math.min(lv.needed>0?Math.round(lv.current/lv.needed*100):100,100);
+        let rewardBadge='';
+        if(streak>=7)rewardBadge='🔥 WEEK STREAK';else if(streak>=3)rewardBadge='⚡ ON A ROLL';
+        return`<div class="xp-sk-row">
+          <div class="xp-sk-icon">${sk.icon||'⬡'}</div>
+          <div class="xp-sk-info">
+            <div class="xp-sk-name">${sk.name} ${rewardBadge?'<span style="font-size:9px;color:var(--gold);margin-left:6px">'+rewardBadge+'</span>':''}</div>
+            <div class="xp-sk-bar-bg"><div class="xp-sk-bar-fill" style="width:${pct2}%;background:${sk.color||'var(--blue)'}"></div></div>
+            <div class="xp-sk-meta"><span class="xp-sk-lv">LV ${lv.level}</span><span class="xp-sk-pts">${xp} XP · ${lv.current}/${lv.needed} to LV${lv.level+1}</span>${streak?`<span class="xp-sk-streak">🔥 ${streak}-DAY STREAK</span>`:'<span class="xp-sk-streak" style="opacity:0.3">NO STREAK</span>'}</div>
+          </div>
+        </div>`;}).join('')}
+      </div>
+    </div>
+    <div style="margin-top:32px;padding-top:24px;border-top:1px solid var(--border)">
+      <div style="font-family:Share Tech Mono,monospace;font-size:10px;color:var(--text-dim);letter-spacing:2px;margin-bottom:16px">STREAK REWARDS</div>
+      <div style="display:grid;gap:8px">
+        ${[{days:3,reward:'+20 bonus XP per objective',icon:'⚡'},{days:7,reward:'+75 bonus XP + 🔥 FIRE badge',icon:'🔥'},{days:14,reward:'+150 bonus XP + rank-up sound',icon:'💥'},{days:30,reward:'+300 bonus XP + LEGENDARY status',icon:'👑'}].map(r=>`<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--panel2);border:1px solid var(--border)"><span style="font-size:16px">${r.icon}</span><span style="font-family:Orbitron,sans-serif;font-size:9px;color:var(--gold);letter-spacing:2px">${r.days}-DAY STREAK</span><span style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--text-dim);margin-left:auto">${r.reward}</span></div>`).join('')}
+      </div>
+    </div>`;
+}
+
+// ════════════════════════════════════════════════════
+// WEEKLY COMPLETE SOUND & ANIMATION
+// ════════════════════════════════════════════════════
+let _burstTimer=null;
+function showWeeklyCompleteBurst(skillName,week){
+  document.getElementById('wcbSub').textContent=skillName.toUpperCase()+' · WEEK '+week;
+  const el=document.getElementById('wkCompleteBurst');
+  el.classList.add('show');
+  if(_burstTimer)clearTimeout(_burstTimer);
+  _burstTimer=setTimeout(()=>el.classList.remove('show'),3000);
+  // play a special weekly-complete sound
+  sndWeeklyComplete();
+  speak(`Week ${week} objectives complete for ${skillName}!`,{rate:1.05});
+}
+
+// ════════════════════════════════════════════════════
+// WEEKLY OBJECTIVES BUILDER (in skill modal)
+// ════════════════════════════════════════════════════
+let _woData={}; // {weekNum: [obj1, obj2, ...]}
+let _woActiveWeek=1;
+let _woTotalWeeks=13;
+
+function initWOBuilder(existingWO,totalWeeks){
+  _woData={};_woActiveWeek=1;_woTotalWeeks=totalWeeks||13;
+  // Pre-fill existing
+  if(existingWO){Object.entries(existingWO).forEach(([w,objs])=>{if(objs&&objs.length)_woData[parseInt(w)]=[...objs];});}
+  renderWOTabs();renderWOWeek(_woActiveWeek);
+}
+
+function renderWOTabs(){
+  const wrap=document.getElementById('woWeekTabs');if(!wrap)return;
+  wrap.innerHTML='';
+  for(let w=1;w<=_woTotalWeeks;w++){
+    const hasObjs=(_woData[w]&&_woData[w].length>0);
+    const btn=document.createElement('button');
+    btn.className='wo-tab'+(w===_woActiveWeek?' active':'');
+    btn.textContent='W'+w+(hasObjs?' ●':'');
+    btn.style.color=hasObjs?'var(--gold)':'';
+    btn.onclick=()=>{_woActiveWeek=w;renderWOTabs();renderWOWeek(w);};
+    wrap.appendChild(btn);
+  }
+}
+
+function renderWOWeek(w){
+  const builder=document.getElementById('woBuilder');if(!builder)return;
+  const objs=_woData[w]||[];
+  builder.innerHTML=`<div style="font-family:Share Tech Mono,monospace;font-size:8px;color:var(--gold);letter-spacing:2px;margin-bottom:8px">WEEK ${w} OBJECTIVES</div>
+    <div id="woObjList">${objs.map((o,i)=>`<div style="display:flex;gap:6px;margin-bottom:6px"><input class="wo-obj-input" value="${o.replace(/"/g,'&quot;')}" oninput="updateWOObj(${w},${i},this.value)" placeholder="Objective ${i+1}..."><button class="wo-rm-obj" onclick="removeWOObj(${w},${i})">✕</button></div>`).join('')}</div>
+    <button class="add-task-btn" onclick="addWOObj(${w})" style="margin-top:4px">+ ADD OBJECTIVE FOR WEEK ${w}</button>`;
+}
+
+function addWOObj(w){if(!_woData[w])_woData[w]=[];_woData[w].push('');renderWOTabs();renderWOWeek(w);}
+function removeWOObj(w,i){if(_woData[w]){_woData[w].splice(i,1);if(!_woData[w].length)delete _woData[w];}renderWOTabs();renderWOWeek(w);}
+function updateWOObj(w,i,val){if(!_woData[w])_woData[w]=[];_woData[w][i]=val;}
+
+// ════════════════════════════════════════════════════
+// AI CHATBOT (powered by Hugging Face — free, open source)
+// Uses HF Inference API with Mistral-7B-Instruct
 // ════════════════════════════════════════════════════
 let chatOpen=false;
 let chatHistory=[];
+
+// HuggingFace free inference endpoint — no key needed for rate-limited use
+// Uses the public conversational pipeline
+const HF_MODEL = 'mistralai/Mistral-7B-Instruct-v0.2';
 
 function toggleChat(){
   chatOpen=!chatOpen;
   const panel=document.getElementById('chatPanel');
   if(chatOpen){
     panel.classList.add('open');
-    if(chatHistory.length===0)addAIBubble("Hey! I'm Aria, your system assistant 👋 I can see all your skills and progress. What would you like to know?");
+    if(chatHistory.length===0)addAIBubble("Hey! I'm Aria, your system assistant ✦ I can see all your skills, XP, and progress. What do you need?");
     setTimeout(()=>document.getElementById('chatInp').focus(),300);
   }else{
     panel.classList.remove('open');
@@ -1155,56 +1525,75 @@ async function sendChat(){
   inp.value='';
   addUserBubble(msg);
   chatHistory.push({role:'user',content:msg});
-
   const typing=addTyping();
 
-  // Build system context from current data
+  // Build system context
   const data=loadData();
   const sem=data.semesters[data.currentSemester];
   const cw=data.currentWeek||3;
-  let ctx='You are Aria, an enthusiastic and helpful AI assistant embedded in a personal skill tracking system called SKILL SYSTEM. You have full knowledge of the user\'s progress. Keep responses concise and conversational — 2-4 sentences max unless a detailed breakdown is requested. Use the user\'s name when appropriate. Be supportive and energetic.\n\n';
-  ctx+=`Player: ${data.playerName||'Player'}\nCurrent Week: ${cw}\nSemester: ${sem?sem.name:'Semester 1, 2026'}\n\n`;
+
+  let systemPrompt=`You are Aria, an AI assistant embedded in a personal skill tracking app called SKILL SYSTEM. You help the user with their study and skill goals. Be concise, supportive, and direct. Keep responses to 2-4 sentences unless a detailed breakdown is asked for. The user's name is ${data.playerName||'Player'}.`;
+
   if(sem&&sem.skills.length){
-    ctx+='SKILLS PROGRESS:\n';
+    systemPrompt+=`\n\nCurrent Week: ${cw}. Semester: ${sem.name}.`;
+    systemPrompt+=`\nSkills overview:`;
     sem.skills.forEach(sk=>{
       const p=pct(sk,cw);const g=getGrade(p);
+      const xpAmt=(data.xp&&data.xp[sk.id])||0;
+      const streak=(data.streaks&&data.streaks[sk.id])||0;
       const woMap=WO[sk.id]||{};
-      const thisWeekObjs=(woMap[cw]||[]);
+      // include custom weekly objectives if any
+      const customWO=sk.weeklyObjectives||{};
+      const thisWeekObjs=(woMap[cw]||[]).concat(customWO[cw]||[]);
       const thisWeekDone=((sk.weeklyDone||{})[cw]||[]).length;
-      ctx+=`- ${sk.name}: ${p}% (${g.short} grade) | Tasks: ${sk.tasks.filter(t=>t.done).length}/${sk.tasks.length} done | Week ${cw} objectives: ${thisWeekDone}/${thisWeekObjs.length} done\n`;
+      systemPrompt+=`\n- ${sk.name}: ${p}% (${g.short}), XP:${xpAmt}, streak:${streak}d, week ${cw} objs: ${thisWeekDone}/${thisWeekObjs.length}`;
     });
     const avg=Math.round(sem.skills.reduce((s,sk)=>s+pct(sk,cw),0)/sem.skills.length);
-    const og=getGrade(avg);const ng=nextGrade(og);
-    ctx+=`\nOverall: ${avg}% — ${og.short} Grade${ng?' · '+String(ng.min-avg)+'% needed for '+ng.short:'  · MAX GRADE'}\n`;
-    // this week's objectives summary
-    ctx+=`\nWEEK ${cw} OBJECTIVES SUMMARY:\n`;
-    sem.skills.forEach(sk=>{
-      const objs=(WO[sk.id]||{})[cw]||[];if(!objs.length)return;
-      const done=((sk.weeklyDone||{})[cw]||[]).length;
-      const remaining=objs.filter((_,i)=>!((sk.weeklyDone||{})[cw]||[]).includes(i));
-      if(remaining.length)ctx+=`  ${sk.name}: Still to do — ${remaining.slice(0,2).join('; ')}${remaining.length>2?' + more':''}\n`;
-    });
+    systemPrompt+=`\nOverall: ${avg}%`;
   }
 
-  // ── AI PROXY — calls your Cloudflare Worker (see README) ──
-  // Replace the URL below with your deployed Worker URL
-  const WORKER_URL = 'https://skill-system-ai.YOUR-SUBDOMAIN.workers.dev';
+  // Build prompt in Mistral chat format
+  // <s>[INST] system + user [/INST] assistant </s>
+  let prompt='<s>';
+  // Include recent history (last 6 turns)
+  const recent=chatHistory.slice(-7);
+  for(let i=0;i<recent.length;i++){
+    const m=recent[i];
+    if(m.role==='user'){
+      const isFirst=(i===0);
+      prompt+=`[INST]${isFirst?' '+systemPrompt+'\n\n':' '}${m.content} [/INST]`;
+    } else {
+      prompt+=` ${m.content}</s><s>`;
+    }
+  }
 
   try{
-    const res=await fetch(WORKER_URL,{
+    const res=await fetch(`https://api-inference.huggingface.co/models/${HF_MODEL}`,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({system:ctx, messages:chatHistory})
+      body:JSON.stringify({
+        inputs:prompt,
+        parameters:{max_new_tokens:300,temperature:0.7,return_full_text:false,stop:['</s>','[INST]']}
+      })
     });
     const json=await res.json();
-    const reply=json.content?.[0]?.text||'Sorry, I couldn\'t get a response right now.';
+    let reply='';
+    if(Array.isArray(json)&&json[0]?.generated_text){
+      reply=json[0].generated_text.trim();
+    } else if(json.error){
+      // Model loading / rate limit
+      if(json.error.includes('loading')){reply='Give me a moment, my systems are initialising… try again in 20 seconds.';}
+      else{reply='I\'m having trouble connecting right now. Try again in a moment.';}
+    } else {
+      reply='No response received. Try again.';
+    }
     removeTyping();
     addAIBubble(reply);
     chatHistory.push({role:'assistant',content:reply});
-    if(chatHistory.length>20)chatHistory=chatHistory.slice(-20);
+    if(chatHistory.length>16)chatHistory=chatHistory.slice(-16);
   }catch(e){
     removeTyping();
-    addAIBubble('Aria is offline — make sure the Worker URL is set up. Check the README!');
+    addAIBubble('Connection error. Make sure you have internet access and try again.');
   }
 }
 
@@ -1333,6 +1722,13 @@ function sndTick(){
 function sndRankUp(){
   [440,550,660,880].forEach((f,i)=>setTimeout(()=>playTone(f,'sine',0.4,0.15),i*80));
   setTimeout(()=>{playTone(1760,'sine',0.6,0.2);playNoise(0.3,0.08);},400);
+}
+
+// Weekly all complete — celebratory shimmer
+function sndWeeklyComplete(){
+  [523,659,784,1047].forEach((f,i)=>setTimeout(()=>playTone(f,'sine',0.18,0.14),i*60));
+  setTimeout(()=>{playTone(1047,'sine',0.25,0.18,true);playNoise(0.15,0.06);},280);
+  setTimeout(()=>playTone(1319,'sine',0.12,0.3,true),400);
 }
 
 // Open panel / modal
