@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SYSTEM // Skill Tracker v5.3</title>
+<title>SYSTEM // Skill Tracker v5.5</title>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script type="module">
 // ════════════════════════════════════════════════════
@@ -798,6 +798,202 @@ body.theme-feminine .lb-bar-fill { background:linear-gradient(90deg,var(--blue),
 </style>
 
 <style>
+/* ══════════════════════════════════════════════════════
+   🌸 BLOOM MODE — Lofi Study Companion
+   ══════════════════════════════════════════════════════ */
+
+/* ── Lofi Girl companion widget ── */
+#lofiCompanion {
+  display:none;
+  position:fixed;
+  bottom:0; right:80px;
+  width:220px; height:280px;
+  z-index:48;
+  pointer-events:none;
+}
+body.theme-feminine #lofiCompanion { display:block; }
+
+.lofi-scene {
+  width:100%; height:100%;
+  position:relative;
+}
+
+/* Desk glow */
+.lofi-scene::after {
+  content:'';
+  position:absolute;
+  bottom:0; left:50%;
+  transform:translateX(-50%);
+  width:180px; height:40px;
+  background:radial-gradient(ellipse,rgba(255,180,220,0.25) 0%,transparent 70%);
+  pointer-events:none;
+}
+
+/* Room window glow */
+@keyframes lampFlicker {
+  0%,100%{opacity:1;} 50%{opacity:0.92;} 75%{opacity:0.97;}
+}
+@keyframes girlBlink {
+  0%,94%,100%{transform:scaleY(1);} 96%,98%{transform:scaleY(0.08);}
+}
+@keyframes girlBreathe {
+  0%,100%{transform:translateY(0);} 50%{transform:translateY(-3px);}
+}
+@keyframes girlWrite {
+  0%,100%{transform:rotate(-2deg) translateX(0);} 50%{transform:rotate(2deg) translateX(3px);}
+}
+@keyframes catBreath {
+  0%,100%{transform:scaleY(1);} 50%{transform:scaleY(1.06);}
+}
+@keyframes steamRise {
+  0%{opacity:0.6;transform:translateY(0) scaleX(1);}
+  100%{opacity:0;transform:translateY(-18px) scaleX(1.4);}
+}
+@keyframes cherryBlossom {
+  0%{opacity:0;transform:translateY(-10px) rotate(0deg);}
+  10%{opacity:1;}
+  90%{opacity:0.7;}
+  100%{opacity:0;transform:translateY(105vh) rotate(720deg);}
+}
+@keyframes blossomSway {
+  0%,100%{margin-left:0px;} 50%{margin-left:40px;}
+}
+
+/* ── Welcome screen bloom variant ── */
+#welcomeScreen.bloom-welcome {
+  background: linear-gradient(180deg, #1a0a20 0%, #0d0510 100%);
+}
+#welcomeScreen.bloom-welcome .ws-bg {
+  background: radial-gradient(ellipse at 50% 30%, rgba(255,150,200,0.12) 0%, transparent 60%);
+}
+
+/* Cosy room scene inside welcome */
+.bloom-room {
+  display:none;
+  position:absolute;
+  inset:0;
+  overflow:hidden;
+}
+body.theme-feminine #welcomeScreen .bloom-room { display:block; }
+
+/* Stars */
+.bloom-star {
+  position:absolute;
+  background:#fff;
+  border-radius:50%;
+  animation:blink 2s ease-in-out infinite;
+}
+
+/* Window */
+.bloom-window {
+  position:absolute;
+  top:8%; left:50%;
+  transform:translateX(-50%);
+  width:min(320px,70vw);
+  height:min(200px,35vw);
+  border:3px solid rgba(255,180,220,0.3);
+  border-radius:8px;
+  background:linear-gradient(180deg,#1a0530 0%,#0d0220 60%,#1a0530 100%);
+  overflow:hidden;
+  box-shadow:0 0 40px rgba(255,120,180,0.15), inset 0 0 30px rgba(100,20,80,0.3);
+}
+
+.bloom-city {
+  position:absolute;
+  bottom:0; left:0; right:0;
+  height:65%;
+  background:
+    linear-gradient(180deg, transparent 0%, rgba(20,5,35,0.9) 100%);
+}
+
+/* City silhouette using box shadows */
+.bloom-buildings {
+  position:absolute;
+  bottom:0; left:0; right:0; height:100%;
+}
+
+.bloom-moon {
+  position:absolute;
+  top:14%; right:18%;
+  width:36px; height:36px;
+  background:radial-gradient(circle,#ffe8f5 40%,#ffb8d8 70%,transparent 100%);
+  border-radius:50%;
+  box-shadow:0 0 20px rgba(255,180,220,0.6), 0 0 40px rgba(255,150,200,0.3);
+  animation:glowPulse 4s ease-in-out infinite;
+}
+
+/* Bloom welcome text positioning */
+body.theme-feminine #welcomeScreen .ws-content {
+  position:relative; z-index:2;
+  margin-top:min(240px,44vw);
+}
+body.theme-feminine #welcomeScreen .ws-sys {
+  font-size:10px; letter-spacing:5px;
+}
+body.theme-feminine #welcomeScreen .ws-wlc {
+  font-size:clamp(11px,1.8vw,15px); letter-spacing:2px; margin-top:10px;
+}
+body.theme-feminine #welcomeScreen .ws-name {
+  font-size:clamp(28px,5vw,52px); letter-spacing:2px; margin-top:4px;
+}
+body.theme-feminine #welcomeScreen .ws-rl {
+  font-size:10px; letter-spacing:2px;
+}
+body.theme-feminine #welcomeScreen .ws-grade {
+  font-size:clamp(18px,3vw,32px); letter-spacing:2px;
+}
+body.theme-feminine #welcomeScreen .ws-enter {
+  letter-spacing:3px; font-size:10px; margin-top:28px;
+}
+
+/* Cherry blossom petals */
+.cherry-petal {
+  position:fixed;
+  top:-20px;
+  pointer-events:none;
+  z-index:3;
+  font-size:14px;
+  animation: cherryBlossom linear infinite, blossomSway ease-in-out infinite;
+  filter:drop-shadow(0 0 4px rgba(255,150,200,0.5));
+}
+
+/* Bloom start screen */
+body.theme-feminine #startScreen {
+  background: linear-gradient(180deg,#100818 0%,#0a0514 100%);
+}
+body.theme-feminine #startScreen .ss-ring {
+  border-color:rgba(255,150,200,0.15);
+}
+
+/* Soft welcome voice indicator */
+.bloom-voice-indicator {
+  display:none;
+  position:fixed; top:20px; left:50%; transform:translateX(-50%);
+  z-index:1005;
+  background:rgba(42,26,48,0.92);
+  border:1px solid rgba(255,150,200,0.3);
+  border-radius:20px;
+  padding:8px 18px;
+  font-family:'Nunito',sans-serif;
+  font-size:11px;
+  color:rgba(255,180,220,0.8);
+  backdrop-filter:blur(8px);
+  animation:fadeUp 0.3s forwards;
+  gap:8px;
+  align-items:center;
+}
+body.theme-feminine .bloom-voice-indicator.show { display:flex; }
+.bvi-dot {
+  width:6px; height:6px; border-radius:50%;
+  background:#ff9ec8;
+  animation:blink 0.8s ease-in-out infinite;
+}
+
+/* Lofi companion in main app */
+body.theme-feminine #lofiCompanion { animation:girlBreathe 4s ease-in-out infinite; }
+</style>
+
+<style>
 /* Floating sakura particles for feminine theme */
 @keyframes sakuraFall {
   0%   { transform:translateY(-20px) rotate(0deg); opacity:0; }
@@ -817,6 +1013,232 @@ body.theme-feminine .lb-bar-fill { background:linear-gradient(90deg,var(--blue),
 </style>
 </head>
 <body>
+<!-- ═══ BLOOM VOICE INDICATOR ═══ -->
+<div class="bloom-voice-indicator" id="bloomVoiceIndicator">
+  <div class="bvi-dot"></div>
+  <span id="bloomVoiceTxt">aria is speaking~</span>
+</div>
+
+<!-- ═══ LOFI GIRL COMPANION ═══ -->
+<div id="lofiCompanion">
+  <svg viewBox="0 0 220 280" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+    <!-- Desk -->
+    <rect x="0" y="230" width="220" height="50" rx="4" fill="#2a1520" opacity="0.9"/>
+    <rect x="0" y="228" width="220" height="8" rx="2" fill="#3d1f2e"/>
+    <!-- Lamp -->
+    <line x1="60" y1="228" x2="60" y2="160" stroke="#5a3045" stroke-width="3"/>
+    <line x1="60" y1="160" x2="90" y2="130" stroke="#5a3045" stroke-width="3"/>
+    <ellipse cx="90" cy="125" rx="22" ry="14" fill="#c8906a" opacity="0.95"/>
+    <!-- Lamp glow -->
+    <radialGradient id="lampGlow" cx="50%" cy="100%" r="80%">
+      <stop offset="0%" stop-color="#ffdd99" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#ffdd99" stop-opacity="0"/>
+    </radialGradient>
+    <ellipse cx="90" cy="145" rx="55" ry="40" fill="url(#lampGlow)" style="animation:lampFlicker 3s ease-in-out infinite"/>
+    <!-- Books on desk -->
+    <rect x="10" y="210" width="14" height="20" rx="1" fill="#e87878"/>
+    <rect x="25" y="213" width="14" height="17" rx="1" fill="#78aae8"/>
+    <rect x="40" y="215" width="10" height="15" rx="1" fill="#e8c878"/>
+    <!-- Coffee mug -->
+    <rect x="155" y="210" width="22" height="20" rx="3" fill="#f0ede8"/>
+    <path d="M177 217 Q185 217 185 222 Q185 227 177 227" fill="none" stroke="#f0ede8" stroke-width="2"/>
+    <rect x="157" y="212" width="18" height="5" rx="2" fill="#c8a882" opacity="0.5"/>
+    <!-- Steam from mug -->
+    <path d="M162 210 Q164 204 162 198" fill="none" stroke="rgba(255,220,220,0.5)" stroke-width="1.5" style="animation:steamRise 2s ease-out infinite"/>
+    <path d="M168 210 Q170 203 168 196" fill="none" stroke="rgba(255,220,220,0.4)" stroke-width="1.5" style="animation:steamRise 2s ease-out 0.7s infinite"/>
+    <path d="M174 210 Q176 205 174 199" fill="none" stroke="rgba(255,220,220,0.3)" stroke-width="1.5" style="animation:steamRise 2s ease-out 1.4s infinite"/>
+    <!-- Notebook -->
+    <rect x="95" y="215" width="55" height="15" rx="2" fill="#f5f0e8"/>
+    <line x1="100" y1="220" x2="145" y2="220" stroke="#ccc" stroke-width="0.8"/>
+    <line x1="100" y1="224" x2="140" y2="224" stroke="#ccc" stroke-width="0.8"/>
+    <!-- Pen/pencil -->
+    <rect x="143" y="212" width="3" height="22" rx="1" fill="#f0c040" transform="rotate(-15,143,223)"/>
+    <!-- Cat sleeping on desk edge -->
+    <g style="animation:catBreath 3s ease-in-out infinite;transform-origin:180px 220px">
+      <ellipse cx="183" cy="218" rx="22" ry="12" fill="#e8894a"/>
+      <ellipse cx="172" cy="212" rx="9" ry="8" fill="#e8894a"/>
+      <!-- Cat face -->
+      <ellipse cx="168" cy="212" rx="1.5" ry="0.8" fill="#3a2010"/>
+      <!-- Cat ears -->
+      <polygon points="166,206 170,206 168,202" fill="#e8894a"/>
+      <polygon points="173,206 177,207 176,202" fill="#e8894a"/>
+      <!-- Cat tail curl -->
+      <path d="M205 218 Q215 210 210 205 Q205 200 200 208" fill="none" stroke="#e8894a" stroke-width="4" stroke-linecap="round"/>
+    </g>
+    <!-- Girl body -->
+    <g style="animation:girlBreathe 4s ease-in-out infinite;transform-origin:110px 180px">
+      <!-- Sweater/top -->
+      <ellipse cx="110" cy="195" rx="38" ry="35" fill="#4a7a5a"/>
+      <!-- Collar -->
+      <path d="M92 175 Q110 185 128 175" fill="none" stroke="#3a6a4a" stroke-width="3"/>
+      <!-- Arms -->
+      <path d="M72 185 Q68 200 80 215" fill="none" stroke="#4a7a5a" stroke-width="14" stroke-linecap="round"/>
+      <!-- Right arm writing -->
+      <g style="animation:girlWrite 1.5s ease-in-out infinite;transform-origin:140px 205px">
+        <path d="M148 185 Q155 200 148 215" fill="none" stroke="#4a7a5a" stroke-width="14" stroke-linecap="round"/>
+      </g>
+      <!-- Neck/skin -->
+      <rect x="104" y="163" width="12" height="16" rx="4" fill="#f5c8a0"/>
+      <!-- Head -->
+      <ellipse cx="110" cy="148" rx="32" ry="30" fill="#f5c8a0"/>
+      <!-- Hair - bun style -->
+      <ellipse cx="110" cy="124" rx="22" ry="14" fill="#6b3a1f"/>
+      <ellipse cx="110" cy="118" rx="14" ry="12" fill="#6b3a1f"/>
+      <!-- Hair sides -->
+      <ellipse cx="82" cy="145" rx="10" ry="20" fill="#6b3a1f"/>
+      <ellipse cx="138" cy="145" rx="10" ry="20" fill="#6b3a1f"/>
+      <!-- Bangs -->
+      <path d="M82 135 Q96 120 110 125 Q124 120 138 135" fill="#6b3a1f"/>
+      <!-- Eyes (slightly downcast, studying) -->
+      <g style="animation:girlBlink 5s ease-in-out infinite;transform-origin:110px 150px">
+        <ellipse cx="100" cy="150" rx="5" ry="4" fill="#3a2010"/>
+        <ellipse cx="120" cy="150" rx="5" ry="4" fill="#3a2010"/>
+        <!-- Eye shine -->
+        <circle cx="102" cy="149" r="1.5" fill="white" opacity="0.8"/>
+        <circle cx="122" cy="149" r="1.5" fill="white" opacity="0.8"/>
+        <!-- Eyelashes -->
+        <path d="M95 147 Q100 143 105 147" fill="#3a2010" opacity="0.6"/>
+        <path d="M115 147 Q120 143 125 147" fill="#3a2010" opacity="0.6"/>
+      </g>
+      <!-- Nose -->
+      <circle cx="110" cy="158" r="1.5" fill="#e8b090" opacity="0.6"/>
+      <!-- Mouth (small smile) -->
+      <path d="M105 163 Q110 167 115 163" fill="none" stroke="#d4906a" stroke-width="1.5" stroke-linecap="round"/>
+      <!-- Blush -->
+      <ellipse cx="95" cy="160" rx="7" ry="4" fill="#ffb0b0" opacity="0.35"/>
+      <ellipse cx="125" cy="160" rx="7" ry="4" fill="#ffb0b0" opacity="0.35"/>
+      <!-- Headphones -->
+      <path d="M80 145 Q80 115 110 112 Q140 115 140 145" fill="none" stroke="#e8e0d8" stroke-width="7" stroke-linecap="round"/>
+      <rect x="74" y="143" width="13" height="16" rx="6" fill="#e8e0d8"/>
+      <rect x="133" y="143" width="13" height="16" rx="6" fill="#e8e0d8"/>
+      <!-- Headphone accent -->
+      <circle cx="80" cy="151" r="4" fill="#cc4466"/>
+      <circle cx="140" cy="151" r="4" fill="#cc4466"/>
+    </g>
+    <!-- Floating music notes -->
+    <text x="30" y="120" font-size="14" fill="rgba(255,150,200,0.5)" style="animation:fadeUp 2s ease-in-out infinite">♪</text>
+    <text x="185" y="100" font-size="10" fill="rgba(255,150,200,0.4)" style="animation:fadeUp 2s ease-in-out 0.8s infinite">♫</text>
+    <text x="15" y="90" font-size="8" fill="rgba(255,150,200,0.3)" style="animation:fadeUp 2s ease-in-out 1.4s infinite">♩</text>
+  </svg>
+</div>
+
+<!-- ═══ BLOOM ROOM (in welcome screen) ═══ -->
+<script>
+// Inject bloom room into welcome screen
+document.addEventListener('DOMContentLoaded', function(){
+  const ws = document.getElementById('welcomeScreen');
+  if(!ws) return;
+  const room = document.createElement('div');
+  room.className = 'bloom-room';
+  room.id = 'bloomRoom';
+  room.innerHTML = `
+    <!-- Night sky stars -->
+    <div class="bloom-star" style="width:2px;height:2px;top:5%;left:15%;animation-delay:0s"></div>
+    <div class="bloom-star" style="width:1.5px;height:1.5px;top:8%;left:32%;animation-delay:0.5s"></div>
+    <div class="bloom-star" style="width:2px;height:2px;top:4%;left:55%;animation-delay:1s"></div>
+    <div class="bloom-star" style="width:1px;height:1px;top:10%;left:70%;animation-delay:1.5s"></div>
+    <div class="bloom-star" style="width:2px;height:2px;top:6%;left:85%;animation-delay:0.3s"></div>
+    <div class="bloom-star" style="width:1.5px;height:1.5px;top:12%;left:42%;animation-delay:0.8s"></div>
+
+    <!-- Window -->
+    <div class="bloom-window">
+      <div class="bloom-moon"></div>
+      <!-- City silhouette via CSS -->
+      <div class="bloom-city"></div>
+      <div style="position:absolute;bottom:0;left:0;right:0;height:60%;display:flex;align-items:flex-end;gap:3px;padding:0 8px">
+        ${Array.from({length:18},(_,i)=>{
+          const h=20+Math.sin(i*1.7)*15+Math.cos(i*0.9)*10;
+          const w=8+Math.random()*10;
+          return `<div style="flex:1;height:${h}%;background:rgba(20,5,40,0.85);min-width:4px;position:relative">
+            ${Math.random()>0.5?`<div style="position:absolute;top:20%;left:20%;width:3px;height:3px;background:rgba(255,240,180,0.6);box-shadow:0 0 3px rgba(255,240,180,0.4)"></div>`:''}
+          </div>`;
+        }).join('')}
+      </div>
+      <!-- Cherry blossom tree silhouette in window -->
+      <div style="position:absolute;bottom:0;right:8%;width:40px;height:70%">
+        <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:4px;height:55%;background:#3a1525;border-radius:2px"></div>
+        <div style="position:absolute;bottom:50%;left:50%;transform:translateX(-50%);width:42px;height:42px;background:radial-gradient(circle,rgba(255,150,200,0.35) 0%,transparent 70%);border-radius:50%"></div>
+      </div>
+    </div>
+
+    <!-- Desk scene inside welcome -->
+    <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:min(420px,90vw);height:min(240px,42vw)">
+      <svg viewBox="0 0 420 240" style="width:100%;height:100%" xmlns="http://www.w3.org/2000/svg">
+        <!-- Desk surface -->
+        <rect x="0" y="195" width="420" height="45" rx="4" fill="#2a1520"/>
+        <rect x="0" y="193" width="420" height="8" rx="2" fill="#3d1f2e"/>
+        <!-- Lamp -->
+        <line x1="100" y1="193" x2="100" y2="130" stroke="#5a3045" stroke-width="4"/>
+        <line x1="100" y1="130" x2="145" y2="100" stroke="#5a3045" stroke-width="4"/>
+        <ellipse cx="145" cy="94" rx="36" ry="20" fill="#c8906a"/>
+        <radialGradient id="wlampGlow" cx="50%" cy="100%" r="80%">
+          <stop offset="0%" stop-color="#ffdd99" stop-opacity="0.45"/>
+          <stop offset="100%" stop-color="#ffdd99" stop-opacity="0"/>
+        </radialGradient>
+        <ellipse cx="145" cy="125" rx="90" ry="55" fill="url(#wlampGlow)"/>
+        <!-- Books -->
+        <rect x="20" y="172" width="18" height="23" rx="1" fill="#e87878"/>
+        <rect x="40" y="176" width="18" height="19" rx="1" fill="#78aae8"/>
+        <rect x="60" y="178" width="14" height="17" rx="1" fill="#e8c878"/>
+        <!-- Plant -->
+        <rect x="330" y="165" width="28" height="30" rx="4" fill="#8b3a3a"/>
+        <ellipse cx="344" cy="155" rx="24" ry="20" fill="#3a7a3a"/>
+        <ellipse cx="330" cy="162" rx="14" ry="12" fill="#2e6e2e"/>
+        <ellipse cx="358" cy="160" rx="14" ry="12" fill="#2e6e2e"/>
+        <!-- Notebook -->
+        <rect x="180" y="183" width="90" height="14" rx="2" fill="#f5f0e8"/>
+        <line x1="188" y1="188" x2="264" y2="188" stroke="#ddd" stroke-width="1"/>
+        <line x1="188" y1="192" x2="258" y2="192" stroke="#ddd" stroke-width="1"/>
+        <!-- Mug -->
+        <rect x="285" y="176" width="30" height="20" rx="4" fill="#f0ede8"/>
+        <path d="M315 183 Q325 183 325 188 Q325 193 315 193" fill="none" stroke="#f0ede8" stroke-width="3"/>
+        <!-- Steam -->
+        <path d="M293 176 Q296 169 293 162" fill="none" stroke="rgba(255,200,200,0.45)" stroke-width="2" style="animation:steamRise 2s ease-out infinite"/>
+        <path d="M300 176 Q303 168 300 160" fill="none" stroke="rgba(255,200,200,0.35)" stroke-width="2" style="animation:steamRise 2s ease-out 0.8s infinite"/>
+        <!-- Girl (larger for welcome screen) -->
+        <g style="animation:girlBreathe 4s ease-in-out infinite;transform-origin:210px 160px">
+          <ellipse cx="210" cy="175" rx="55" ry="45" fill="#4a7a5a"/>
+          <path d="M155 168 Q150 185 168 200" fill="none" stroke="#4a7a5a" stroke-width="18" stroke-linecap="round"/>
+          <g style="animation:girlWrite 1.8s ease-in-out infinite;transform-origin:258px 185px">
+            <path d="M262 168 Q270 185 262 200" fill="none" stroke="#4a7a5a" stroke-width="18" stroke-linecap="round"/>
+          </g>
+          <rect x="202" y="143" width="16" height="20" rx="6" fill="#f5c8a0"/>
+          <ellipse cx="210" cy="125" rx="45" ry="42" fill="#f5c8a0"/>
+          <ellipse cx="210" cy="98" rx="30" ry="20" fill="#6b3a1f"/>
+          <ellipse cx="210" cy="90" rx="20" ry="17" fill="#6b3a1f"/>
+          <ellipse cx="168" cy="120" rx="14" ry="26" fill="#6b3a1f"/>
+          <ellipse cx="252" cy="120" rx="14" ry="26" fill="#6b3a1f"/>
+          <path d="M168 115 Q190 97 210 102 Q230 97 252 115" fill="#6b3a1f"/>
+          <g style="animation:girlBlink 5s ease-in-out infinite;transform-origin:210px 130px">
+            <ellipse cx="197" cy="130" rx="7" ry="6" fill="#3a2010"/>
+            <ellipse cx="223" cy="130" rx="7" ry="6" fill="#3a2010"/>
+            <circle cx="200" cy="128" r="2" fill="white" opacity="0.8"/>
+            <circle cx="226" cy="128" r="2" fill="white" opacity="0.8"/>
+          </g>
+          <circle cx="210" cy="140" r="2" fill="#e8b090" opacity="0.5"/>
+          <path d="M204 146 Q210 151 216 146" fill="none" stroke="#d4906a" stroke-width="2" stroke-linecap="round"/>
+          <ellipse cx="183" cy="138" rx="10" ry="6" fill="#ffb0b0" opacity="0.35"/>
+          <ellipse cx="237" cy="138" rx="10" ry="6" fill="#ffb0b0" opacity="0.35"/>
+          <path d="M157 125 Q157 88 210 85 Q263 88 263 125" fill="none" stroke="#e8e0d8" stroke-width="10" stroke-linecap="round"/>
+          <rect x="149" y="122" width="18" height="22" rx="8" fill="#e8e0d8"/>
+          <rect x="253" y="122" width="18" height="22" rx="8" fill="#e8e0d8"/>
+          <circle cx="158" cy="133" r="6" fill="#cc4466"/>
+          <circle cx="262" cy="133" r="6" fill="#cc4466"/>
+        </g>
+        <!-- Music notes floating -->
+        <text x="50" y="90" font-size="18" fill="rgba(255,150,200,0.5)" style="animation:fadeUp 2.5s ease-in-out infinite">♪</text>
+        <text x="360" y="75" font-size="14" fill="rgba(255,150,200,0.4)" style="animation:fadeUp 2.5s ease-in-out 1s infinite">♫</text>
+        <text x="380" y="110" font-size="10" fill="rgba(255,150,200,0.3)" style="animation:fadeUp 2.5s ease-in-out 1.8s infinite">♩</text>
+        <!-- Cherry blossoms drifting in scene -->
+        <text x="75" y="50" font-size="12" fill="rgba(255,150,200,0.6)" style="animation:fadeUp 3s ease-in-out infinite">🌸</text>
+        <text x="340" y="40" font-size="10" fill="rgba(255,150,200,0.5)" style="animation:fadeUp 3s ease-in-out 1.2s infinite">🌸</text>
+      </svg>
+    </div>
+  `;
+  ws.insertBefore(room, ws.firstChild);
+});
+</script>
+
 <canvas id="particles"></canvas>
 
 <!-- ═══ NAME ENTRY SCREEN ═══ -->
@@ -2299,7 +2721,6 @@ async function sendChat(){
   const msg=inp.value.trim();if(!msg)return;
   inp.value='';
   addUserBubble(msg);
-  chatHistory.push({role:'user',content:msg});
   const typing=addTyping();
 
   // Build system context
@@ -2307,15 +2728,20 @@ async function sendChat(){
   const sem=data.semesters[data.currentSemester];
   const cw=data.currentWeek||3;
 
-  let systemPrompt=`You are Aria, an AI assistant in a skill tracking app. Be concise and supportive. User: ${data.playerName||'Player'}.`;
+  let systemPrompt=`You are Aria, a friendly AI assistant built into a personal skill tracking app called Skill System. Help the user with their study goals, skills, XP, and progress. Be warm, concise, and direct — 2-4 sentences unless more detail is needed. The user's name is ${data.playerName||'Player'}.`;
   if(sem&&sem.skills.length){
-    systemPrompt+=` Week ${cw}, ${sem.name}.`;
+    systemPrompt+=`\n\nCurrent week: ${cw}. Semester: ${sem.name}. Skills:`;
     sem.skills.forEach(sk=>{
-      const p=pct(sk,cw);
-      systemPrompt+=` ${sk.name}:${p}%,XP:${(data.xp&&data.xp[sk.id])||0}.`;
+      const p=pct(sk,cw);const g=getGrade(p);
+      const xp=(data.xp&&data.xp[sk.id])||0;
+      const streak=(data.streaks&&data.streaks[sk.id])||0;
+      const woMap=WO[sk.id]||{};const customWO=sk.weeklyObjectives||{};
+      const thisWeekObjs=(woMap[cw]||[]).concat(customWO[cw]||[]);
+      const doneCnt=((sk.weeklyDone||{})[cw]||[]).length;
+      systemPrompt+=`\n• ${sk.name}: ${p}% (${g.short}), XP:${xp}, streak:${streak}d, week ${cw} objectives:${doneCnt}/${thisWeekObjs.length} done`;
     });
     const avg=Math.round(sem.skills.reduce((s,sk)=>s+pct(sk,cw),0)/sem.skills.length);
-    systemPrompt+=` Overall:${avg}%.`;
+    systemPrompt+=`\nOverall average: ${avg}% (${getGrade(avg).short})`;
   }
 
   const GEMINI_KEY=(window.ARIA_KEY||'').trim()||(sessionStorage.getItem('aria_key')||'').trim()||(data.ariaKey||'').trim();
@@ -2326,18 +2752,27 @@ async function sendChat(){
   }
 
   try{
-    // Simplest valid Gemini request: prepend system as first user message
+    // Build a clean alternating user/model history
+    // chatHistory does NOT include the current message yet — we add it after success
+    // Structure: [system_ctx_user, system_ack_model, ...past_history, current_user_msg]
+    const pastHistory=chatHistory.slice(-10);
+
+    // Ensure strict alternation — filter out any consecutive same-role messages
+    const cleanHistory=[];
+    for(const m of pastHistory){
+      const role=m.role==='assistant'?'model':'user';
+      if(cleanHistory.length>0&&cleanHistory[cleanHistory.length-1].role===role) continue;
+      cleanHistory.push({role,parts:[{text:m.content}]});
+    }
+
     const msgs=[
       {role:'user', parts:[{text:systemPrompt}]},
-      {role:'model',parts:[{text:'Got it, ready to help!'}]},
-      ...chatHistory.slice(-10).map(m=>({
-        role:m.role==='assistant'?'model':'user',
-        parts:[{text:m.content}]
-      }))
+      {role:'model',parts:[{text:`Understood! I'm Aria, ready to help ${data.playerName||'you'} with their skills.`}]},
+      ...cleanHistory,
+      {role:'user', parts:[{text:msg}]}
     ];
 
-    // Try models in order until one works (handles quota/availability issues)
-    // Current valid free-tier models (March 2026)
+    // Try models in order
     const MODELS=['gemini-2.5-flash','gemini-1.5-flash','gemini-1.5-flash-latest'];
     let json=null;
     for(const model of MODELS){
@@ -2350,26 +2785,29 @@ async function sendChat(){
         }
       );
       json=await res.json();
-      // If quota exceeded or model unavailable, try next
-      if(json.error&&(json.error.status==='RESOURCE_EXHAUSTED'||json.error.status==='NOT_FOUND')){
+      if(json.error&&(json.error.status==='RESOURCE_EXHAUSTED'||json.error.status==='NOT_FOUND'||json.error.status==='INVALID_ARGUMENT')){
         continue;
       }
       break;
     }
+
     let reply='';
     if(json&&json.candidates?.[0]?.content?.parts?.[0]?.text){
       reply=json.candidates[0].content.parts[0].text.trim();
     } else if(json&&json.error){
       if(json.error.status==='RESOURCE_EXHAUSTED'){
-        reply='⚠️ Your Gemini API key has hit its free quota limit. Wait a minute and try again, or get a new key at aistudio.google.com/app/apikey — it\'s free.';
+        reply='⚠️ API quota reached — wait a minute and try again, or get a fresh key at aistudio.google.com/app/apikey';
       } else {
         reply='Error: '+(json.error.message||JSON.stringify(json.error));
       }
     } else {
       reply='No response received. Check your API key in Settings.';
     }
+
     removeTyping();
     addAIBubble(reply);
+    // Only push to history AFTER successful exchange
+    chatHistory.push({role:'user',content:msg});
     chatHistory.push({role:'assistant',content:reply});
     if(chatHistory.length>20)chatHistory=chatHistory.slice(-20);
   }catch(e){
@@ -2400,26 +2838,54 @@ function showWelcome(){
   const og=getOverallGrade(data);
   const sem=data.semesters[data.currentSemester];
   const week=data.currentWeek||3;
+  const isBloom=document.body.classList.contains('theme-feminine');
+
   document.getElementById('wsName').textContent=name.toUpperCase();
   document.getElementById('wsGrade').textContent=og.gem+' '+og.short+' GRADE';
   document.getElementById('wsGrade').style.color=og.color;
   document.getElementById('wsGrade').style.textShadow='0 0 28px '+og.color;
   document.getElementById('wsWeek').textContent='WEEK '+week+' · '+(sem?sem.name.toUpperCase():'SEMESTER 1 2026');
+
   const ws=document.getElementById('welcomeScreen');
   ws.style.display='flex';ws.offsetHeight;
 
-  // Cold, authoritative System voice — Solo Levelling style
+  // Bloom mode: add bloom-welcome class for cosy styling
+  if(isBloom){ws.classList.add('bloom-welcome');}
+  else{ws.classList.remove('bloom-welcome');}
+
+  // Build speech text based on theme
   const ng=nextGrade(og);
-  let speechText=`System initialised. Welcome back, ${name}.`;
-  if(ng){const data2=loadData();const avg=Math.round((data2.semesters[data2.currentSemester]?.skills||[]).reduce((s,sk)=>s+pct(sk,data2.currentWeek||3),0)/Math.max(1,(data2.semesters[data2.currentSemester]?.skills||[]).length));const needed=ng.min-avg;speechText+=` Current rank: ${og.short}. ${needed} percent remaining until ${ng.short}. Begin.`;}
-  else{speechText+=` Current rank: Special Grade. Maximum level achieved.`;}
-  speak(speechText,{rate:0.95});
+  let speechText='';
+  if(isBloom){
+    // Soft, warm, encouraging voice for bloom mode
+    const greetings=['Hey there','Welcome back','Hi','Good to see you'];
+    const g=greetings[Math.floor(Math.random()*greetings.length)];
+    speechText=`${g}, ${name}! Ready to study together? `;
+    if(ng){
+      const data2=loadData();
+      const avg=Math.round((data2.semesters[data2.currentSemester]?.skills||[]).reduce((s,sk)=>s+pct(sk,data2.currentWeek||3),0)/Math.max(1,(data2.semesters[data2.currentSemester]?.skills||[]).length));
+      const needed=ng.min-avg;
+      speechText+=`You're at ${avg}% overall — just ${needed}% more to reach ${ng.short}. You've got this!`;
+    } else {
+      speechText+=`You've reached the top rank. Absolutely legendary!`;
+    }
+    // Show bloom voice indicator
+    const bvi=document.getElementById('bloomVoiceIndicator');
+    const bvt=document.getElementById('bloomVoiceTxt');
+    if(bvi&&bvt){bvt.textContent=`aria is speaking~`;bvi.classList.add('show');setTimeout(()=>bvi.classList.remove('show'),5000);}
+  } else {
+    // Original cold system voice
+    speechText=`System initialised. Welcome back, ${name}.`;
+    if(ng){const data2=loadData();const avg=Math.round((data2.semesters[data2.currentSemester]?.skills||[]).reduce((s,sk)=>s+pct(sk,data2.currentWeek||3),0)/Math.max(1,(data2.semesters[data2.currentSemester]?.skills||[]).length));const needed=ng.min-avg;speechText+=` Current rank: ${og.short}. ${needed} percent remaining until ${ng.short}. Begin.`;}
+    else{speechText+=` Current rank: Special Grade. Maximum level achieved.`;}
+  }
+  speak(speechText, isBloom ? {rate:1.05, pitch:1.2, bloom:true} : {rate:0.95});
 
   if(welcomeTimer)clearTimeout(welcomeTimer);
   welcomeTimer=setTimeout(()=>{
     ws.classList.add('fade-out');
     setTimeout(()=>{
-      ws.style.display='none';ws.classList.remove('fade-out');
+      ws.style.display='none';ws.classList.remove('fade-out','bloom-welcome');
       document.getElementById('mainApp').classList.add('show');
       document.getElementById('returnBtn').style.display='flex';
       document.getElementById('licensePanel').classList.add('visible');
@@ -2455,25 +2921,26 @@ let _sakuraInterval=null;
 
 function spawnSakuraPetal(){
   const petal=document.createElement('div');
-  petal.className='sakura-petal';
-  const emojis=['🌸','🌺','✿','❀','🌷','💮'];
+  petal.className='cherry-petal';
+  // Richer variety: actual cherry blossom chars + soft emojis
+  const emojis=['🌸','🌸','🌸','🌺','✿','❀','🌷','🌸'];
   petal.textContent=emojis[Math.floor(Math.random()*emojis.length)];
   const left=Math.random()*100;
-  const dur=6+Math.random()*8;
-  const swayDur=2+Math.random()*3;
-  const size=10+Math.random()*10;
-  petal.style.cssText=`left:${left}vw;font-size:${size}px;animation-duration:${dur}s,${swayDur}s;animation-delay:${Math.random()*2}s,0s;`;
+  const dur=7+Math.random()*9;
+  const swayDur=2.5+Math.random()*3;
+  const size=10+Math.random()*12;
+  const opacity=0.4+Math.random()*0.5;
+  petal.style.cssText=`left:${left}vw;font-size:${size}px;opacity:${opacity};animation-duration:${dur}s,${swayDur}s;animation-delay:${Math.random()*2}s,0s;`;
   document.body.appendChild(petal);
   _sakuraPetals.push(petal);
-  // remove after animation
-  setTimeout(()=>{petal.remove();_sakuraPetals=_sakuraPetals.filter(p=>p!==petal);},( dur+2)*1000);
+  setTimeout(()=>{petal.remove();_sakuraPetals=_sakuraPetals.filter(p=>p!==petal);},(dur+2)*1000);
 }
 
 function startSakura(){
   if(_sakuraInterval)return;
-  // spawn a few immediately
-  for(let i=0;i<5;i++) setTimeout(spawnSakuraPetal, i*400);
-  _sakuraInterval=setInterval(spawnSakuraPetal,1800);
+  // Burst of petals immediately for that lush bloom entrance
+  for(let i=0;i<12;i++) setTimeout(spawnSakuraPetal, i*200);
+  _sakuraInterval=setInterval(spawnSakuraPetal,1400);
 }
 
 function stopSakura(){
@@ -2697,18 +3164,22 @@ window.showRankUp = function(label, skillName){
 
 // ── SYSTEM VOICE — ElevenLabs (Cold & Authoritative Female, Solo Levelling style) ──
 // Voice: Rachel — cold, precise, authoritative female narrator
-const EL_API_KEY  = 'sk_cfed47e858614300866abb8503797cf8c5a83924d80624a8';
-const EL_VOICE_ID = '21m00Tcm4TlvDq8ikWAM'; // Rachel — cold, precise, female
+// ── Rachel = cold system voice | Aria/warm = bloom voice ──
+const EL_API_KEY   = 'sk_cfed47e858614300866abb8503797cf8c5a83924d80624a8';
+const EL_VOICE_DARK  = '21m00Tcm4TlvDq8ikWAM'; // Rachel — cold, precise
+const EL_VOICE_BLOOM = 'EXAVITQu4vr4xnSDxMaL'; // Bella — warm, friendly, soft
 
 let _currentAudio = null;
 
 async function speak(text, opts={}) {
-  // Cancel any currently playing audio
   if (_currentAudio) { _currentAudio.pause(); _currentAudio = null; }
   if (window.speechSynthesis) window.speechSynthesis.cancel();
 
+  const isBloom = opts.bloom || document.body.classList.contains('theme-feminine');
+  const voiceId = isBloom ? EL_VOICE_BLOOM : EL_VOICE_DARK;
+
   try {
-    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${EL_VOICE_ID}`, {
+    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
       method: 'POST',
       headers: {
         'xi-api-key': EL_API_KEY,
@@ -2718,12 +3189,9 @@ async function speak(text, opts={}) {
       body: JSON.stringify({
         text: text,
         model_id: 'eleven_multilingual_v2',
-        voice_settings: {
-          stability: 0.85,          // very stable = cold, controlled
-          similarity_boost: 0.75,
-          style: 0.12,              // low style = robotic, flat delivery
-          use_speaker_boost: true
-        }
+        voice_settings: isBloom
+          ? { stability:0.55, similarity_boost:0.80, style:0.35, use_speaker_boost:true }   // warm, expressive
+          : { stability:0.85, similarity_boost:0.75, style:0.12, use_speaker_boost:true }    // cold, controlled
       })
     });
 
@@ -2733,20 +3201,28 @@ async function speak(text, opts={}) {
     const url  = URL.createObjectURL(blob);
     _currentAudio = new Audio(url);
     _currentAudio.volume = opts.volume || 1.0;
-    _currentAudio.playbackRate = opts.rate || 0.95; // slightly slower for effect
+    _currentAudio.playbackRate = opts.rate || (isBloom ? 1.05 : 0.95);
     _currentAudio.play();
     _currentAudio.onended = () => { URL.revokeObjectURL(url); _currentAudio = null; };
 
   } catch(e) {
-    // Fallback to browser TTS if ElevenLabs fails
-    console.warn('ElevenLabs TTS failed, falling back to browser voice:', e);
+    // Fallback to browser TTS
+    console.warn('ElevenLabs TTS failed, falling back:', e);
     if (!window.speechSynthesis) return;
     const u = new SpeechSynthesisUtterance(text);
     const voices = window.speechSynthesis.getVoices();
-    const v = voices.find(v=>/samantha|karen|victoria|zira|female/i.test(v.name) && /en/i.test(v.lang))
-           || voices.find(v=>/en/i.test(v.lang));
+    const isBloomFallback = document.body.classList.contains('theme-feminine');
+    let v;
+    if(isBloomFallback){
+      v = voices.find(v=>/samantha|karen|victoria|zira|female/i.test(v.name) && /en/i.test(v.lang))
+        || voices.find(v=>/en/i.test(v.lang));
+      u.rate=opts.rate||1.08; u.pitch=1.25; u.volume=0.95;
+    } else {
+      v = voices.find(v=>/samantha|karen|victoria|zira|female/i.test(v.name) && /en/i.test(v.lang))
+        || voices.find(v=>/en/i.test(v.lang));
+      u.rate=0.88; u.pitch=1.0; u.volume=1.0;
+    }
     if (v) u.voice = v;
-    u.rate = 0.88; u.pitch = 1.1; u.volume = 1.0;
     window.speechSynthesis.speak(u);
   }
 }
