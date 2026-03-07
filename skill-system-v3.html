@@ -2559,12 +2559,10 @@ function applyTheme(theme){
     // Restore original text
     document.querySelectorAll('[data-orig-text]').forEach(el=>{el.textContent=el.dataset.origText;});
     document.querySelectorAll('[data-orig-html]').forEach(el=>{el.innerHTML=el.dataset.origHtml;});
-    // switch music back to dark OST
-    if(window.musicStarted || window._lofiStarted){
-      window.stopLofi&&window.stopLofi();
-      window.stopMusic&&window.stopMusic();
-      setTimeout(()=>window.startMusic&&window.startMusic(),500);
-    }
+    // switch music back to dark OST — always, regardless of current state
+    window.stopLofi && window.stopLofi();
+    window.stopMusic && window.stopMusic();
+    setTimeout(()=>window.startMusic && window.startMusic(), 500);
     if(darkBtn){darkBtn.style.borderColor='var(--border-glow)';darkBtn.style.boxShadow='0 0 20px rgba(10,132,255,0.25)';darkBtn.style.opacity='1';}
     if(femBtn){femBtn.style.borderColor='rgba(220,100,255,0.3)';femBtn.style.boxShadow='none';femBtn.style.opacity='0.7';}
     if(window._particleTheme)window._particleTheme('dark');
