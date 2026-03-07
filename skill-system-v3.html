@@ -53,19 +53,29 @@ onAuthStateChanged(auth, user => {
     document.getElementById('loginScreen').classList.remove('show');
     const sob = document.getElementById('signOutBtn');
     if (sob) { sob.style.display = 'flex'; sob.querySelector('.sob-name').textContent = user.displayName || user.email; }
-    // Boot: load data then reveal start screen or name screen
-    if (typeof initApp === 'function') {
-      initApp().then(() => {
-        // New user — show name entry
-        if (!_dataCache || !_dataCache.playerName || _dataCache.playerName === 'PLAYER') {
-          document.getElementById('nameScreen').classList.add('show');
-        } else {
-          const ss = document.getElementById('startScreen');
-          if (_dataCache.playerName && _dataCache.playerName !== 'PLAYER') ss.classList.add('continue-mode');
-          ss.classList.add('show');
-        }
-      });
+    // Boot: initApp may not be defined yet (module vs regular script timing).
+    // Queue the boot and let initApp drain it once ready.
+    window._pendingAuthUser = user;
+    function attemptBoot() {
+      if (typeof initApp === 'function') {
+        initApp().then(() => {
+          window._pendingAuthUser = null;
+          if (!_dataCache || !_dataCache.playerName || _dataCache.playerName === 'PLAYER') {
+            document.getElementById('nameScreen').classList.add('show');
+          } else {
+            const ss = document.getElementById('startScreen');
+            if (_dataCache.playerName && _dataCache.playerName !== 'PLAYER') ss.classList.add('continue-mode');
+            ss.classList.add('show');
+          }
+        }).catch(e => {
+          console.error('initApp failed:', e);
+          document.getElementById('startScreen').classList.add('show');
+        });
+      } else {
+        setTimeout(attemptBoot, 50);
+      }
     }
+    attemptBoot();
   } else {
     window._fbUser = null;
     document.getElementById('startScreen').classList.remove('show');
@@ -1603,6 +1613,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
 <canvas id="particles"></canvas>
 
+
 <!-- ═══ NAME ENTRY SCREEN ═══ -->
 <div id="nameScreen">
   <div class="ne-bg"></div>
@@ -1892,11 +1903,1808 @@ document.addEventListener('DOMContentLoaded', function(){
 
 <script>
 // ════════════════════════════════════════════════════
-// 🌸 LOFI RADIO — YouTube Stream Player
-// Tunes into real lofi radio channels like a radio dial
+// PARTICLES
+// ════════════════════════════════════════════════════
+const cv=document.getElementById('particles'),cx=cv.getContext('2d');
+let PW,PH,pts=[];
+function resizeCv(){PW=cv.width=innerWidth;PH=cv.height=innerHeight;}
+window.addEventListener('resize',resizeCv);resizeCv();
+for(let i=0;i<60;i++)pts.push({x:Math.random()*PW,y:Math.random()*PH,r:Math.random()*1.4+0.3,vx:(Math.random()-.5)*.28,vy:(Math.random()-.5)*.28,a:Math.random()*.5+.1,c:Math.random()>.7?'#00e5ff':Math.random()>.5?'#0a84ff':'#8855ff'});
+(function anim(){cx.clearRect(0,0,PW,PH);pts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;if(p.x<0)p.x=PW;if(p.x>PW)p.x=0;if(p.y<0)p.y=PH;if(p.y>PH)p.y=0;cx.beginPath();cx.arc(p.x,p.y,p.r,0,Math.PI*2);cx.fillStyle=p.c;cx.globalAlpha=p.a;cx.fill();});cx.globalAlpha=1;requestAnimationFrame(anim);})();
+
+// ════════════════════════════════════════════════════
+// SPEECH — natural, enthusiastic female voice
+// ════════════════════════════════════════════════════
+function speak(text,opts={}){
+  if(!window.speechSynthesis)return;
+  window.speechSynthesis.cancel();
+  const doSpeak=()=>{
+    const u=new SpeechSynthesisUtterance(text);
+    const voices=window.speechSynthesis.getVoices();
+    // Prefer: Samantha (macOS), Google UK English Female, Microsoft Zira, any female English
+    const preferred=voices.find(v=>/samantha/i.test(v.name))
+      ||voices.find(v=>/google uk english female/i.test(v.name))
+      ||voices.find(v=>/zira/i.test(v.name))
+      ||voices.find(v=>/karen/i.test(v.name))
+      ||voices.find(v=>/female/i.test(v.name)&&/en/i.test(v.lang))
+      ||voices.find(v=>/en[-_]AU|en[-_]GB|en[-_]US/i.test(v.lang)&&v.name.toLowerCase().includes('female'))
+      ||voices.find(v=>/en/i.test(v.lang));
+    if(preferred)u.voice=preferred;
+    u.rate=opts.rate||1.08;   // slightly faster = more energetic
+    u.pitch=opts.pitch||1.15; // higher pitch = more feminine/enthusiastic
+    u.volume=opts.volume||0.95;
+    window.speechSynthesis.speak(u);
+  };
+  // Chrome loads voices async
+  if(window.speechSynthesis.getVoices().length){doSpeak();}
+  else{window.speechSynthesis.onvoiceschanged=()=>{doSpeak();window.speechSynthesis.onvoiceschanged=null;};}
+}
+
+// ════════════════════════════════════════════════════
+// GRADE / LICENSE CONFIG
+// ════════════════════════════════════════════════════
+const GRADES=[
+  {rank:5,min:90,max:100,label:'✦ SPECIAL GRADE',short:'SPECIAL GRADE',gem:'🔴',tier:'SPECIAL GRADE',color:'var(--ruby)',licClass:'lic-ruby',watermark:'✦'},
+  {rank:4,min:75,max:89,label:'🟡 1ST GRADE',short:'1ST GRADE',gem:'🟡',tier:'1ST GRADE',color:'var(--goldC)',licClass:'lic-gold',watermark:'◆'},
+  {rank:3,min:60,max:74,label:'⬜ 2ND GRADE',short:'2ND GRADE',gem:'⬜',tier:'2ND GRADE',color:'var(--silver)',licClass:'lic-silver',watermark:'◇'},
+  {rank:2,min:40,max:59,label:'🟤 3RD GRADE',short:'3RD GRADE',gem:'🟤',tier:'3RD GRADE',color:'var(--bronze)',licClass:'lic-bronze',watermark:'◈'},
+  {rank:1,min:0,max:39,label:'⬡ 4TH GRADE',short:'4TH GRADE',gem:'⬡',tier:'4TH GRADE',color:'var(--steel)',licClass:'lic-steel',watermark:'⬡'},
+];
+function getGrade(p){return GRADES.find(g=>p>=g.min)||GRADES[GRADES.length-1];}
+function nextGrade(grade){return GRADES.find(g=>g.rank===grade.rank+1)||null;}
+
+function pct(sk,cw){
+  const currentW=cw||loadData().currentWeek||3;
+  const taskScore=sk.tasks.length?Math.round(sk.tasks.filter(t=>t.done).length/sk.tasks.length*100):0;
+  const woMap=WO[sk.id]||{};
+  let tot=0,don=0;
+  for(let w=1;w<=currentW;w++){tot+=(woMap[w]||[]).length;don+=((sk.weeklyDone||{})[w]||[]).length;}
+  const weeklyScore=tot>0?Math.round(don/tot*100):taskScore;
+  if(!Object.keys(woMap).length)return taskScore;
+  return Math.round(taskScore*.5+weeklyScore*.5);
+}
+function getOverallGrade(data){
+  const sem=data.semesters[data.currentSemester];
+  if(!sem||!sem.skills.length)return getGrade(0);
+  const cw=data.currentWeek||3;
+  return getGrade(Math.round(sem.skills.reduce((s,sk)=>s+pct(sk,cw),0)/sem.skills.length));
+}
+
+// ════════════════════════════════════════════════════
+// DATA LAYER — Firestore (per-user, cross-device)
+// ════════════════════════════════════════════════════
+const KEY='skill_sys_v3'; // kept for migration fallback
+
+// In-memory cache so synchronous render() still works after first load
+let _dataCache = null;
+
+async function loadDataRemote() {
+  const user = window._fbUser;
+  if (!user) return dflt();
+  try {
+    const ref = window._fbDoc(window._fbDb, 'users', user.uid, 'appdata', 'progress');
+    const snap = await window._fbGetDoc(ref);
+    if (snap.exists()) {
+      _dataCache = snap.data();
+      return _dataCache;
+    }
+    // First time: migrate from localStorage if anything is there
+    const legacy = localStorage.getItem(KEY);
+    if (legacy) {
+      const parsed = JSON.parse(legacy);
+      await saveRemote(parsed);
+      _dataCache = parsed;
+      return parsed;
+    }
+    _dataCache = dflt();
+    await saveRemote(_dataCache);
+    return _dataCache;
+  } catch(e) {
+    console.error('Firestore load error:', e);
+    return _dataCache || dflt();
+  }
+}
+
+async function saveRemote(data) {
+  _dataCache = data;
+  const user = window._fbUser;
+  if (!user) return;
+  try {
+    const ref = window._fbDoc(window._fbDb, 'users', user.uid, 'appdata', 'progress');
+    await window._fbSetDoc(ref, data);
+  } catch(e) {
+    console.error('Firestore save error:', e);
+  }
+}
+
+// Synchronous helpers that use the in-memory cache
+// (safe to call after app has initialised via initApp())
+function loadData() { return _dataCache || dflt(); }
+function save(data) { _dataCache = data; saveRemote(data); /* fire-and-forget */ }
+
+function dflt(){const id='sem_s1_2026';return{playerName:'PLAYER',currentSemester:id,currentWeek:3,viewingWeek:3,xp:{},semesters:{[id]:{name:'Semester 1, 2026',totalWeeks:13,skills:defaultSkills()}}};}
+
+// ── Auth helpers ──────────────────────────────────────
+async function loginWithGoogle() {
+  const errEl = document.getElementById('loginError');
+  errEl.textContent = '';
+  try {
+    const provider = new window._GoogleAuthProvider();
+    await window._signInWithPopup(window._fbAuth, provider);
+    // onAuthStateChanged will take over from here
+  } catch(e) {
+    errEl.textContent = 'Sign-in failed: ' + (e.message || 'unknown error');
+  }
+}
+
+function handleSignOut() {
+  if (!confirm('Sign out of Skill System?')) return;
+  _dataCache = null;
+  window._fbSignOut(window._fbAuth);
+}
+
+// ── App boot — called once auth is confirmed ──────────
+async function initApp() {
+  await loadDataRemote(); // warm the cache
+  const ss = document.getElementById('startScreen');
+  // If data has real player name, use continue-mode
+  if (_dataCache && _dataCache.playerName && _dataCache.playerName !== 'PLAYER') {
+    ss.classList.add('continue-mode');
+  }
+}
+
+function defaultSkills(){return[
+  {id:'sk_python',name:'Python Programming',category:'Coding · Year 1',icon:'🐍',color:'var(--blue)',weeklyDone:{},proofNote:'',proofDesc:'All scripts run error-free. GitHub repo link.',tasks:[
+    {id:'t1',text:'Write 10 small scripts (calculator, converter, etc.)',done:false},
+    {id:'t2',text:'Conditionals + loops — guess game + password validator',done:false},
+    {id:'t3',text:'Functions + modular code — calculator with functions',done:false},
+    {id:'t4',text:'Lists + dictionaries — contact list program',done:false},
+    {id:'t5',text:'Modules + imports — multi-file program runs',done:false},
+    {id:'t6',text:'Error handling — no crashes on invalid input',done:false},
+    {id:'t7',text:'APIs — program fetching and displaying live data',done:false},
+    {id:'t8',text:'Data structures — stack + queue implemented',done:false},
+    {id:'t9',text:'Full Python project (≥300 lines, runs without errors)',done:false},
+    {id:'t10',text:'Upload all projects to GitHub',done:false},
+  ]},
+  {id:'sk_networking',name:'Networking',category:'Infrastructure · Year 1',icon:'🌐',color:'var(--cyan)',weeklyDone:{},proofNote:'',proofDesc:'OSI diagram + Packet Tracer file + subnet worksheet + cert schedule',tasks:[
+    {id:'t1',text:'OSI model — all 7 layers from memory under 5 min',done:false},
+    {id:'t2',text:'IPv4 + subnetting — 30 problems (≥27 correct)',done:false},
+    {id:'t3',text:'Routing basics + Packet Tracer topology',done:false},
+    {id:'t4',text:'Switching + VLAN configuration simulation',done:false},
+    {id:'t5',text:'Wireless — WPA2 vs WPA3 comparison written',done:false},
+    {id:'t6',text:'DNS + DHCP configuration simulation',done:false},
+    {id:'t7',text:'Network security — 10 attack types + defenses',done:false},
+    {id:'t8',text:'Full network lab topology file saved',done:false},
+    {id:'t9',text:'Post-semester cert study plan (CCNA/Network+)',done:false},
+  ]},
+  {id:'sk_robotics',name:'Robotics & Electronics',category:'Hardware · Year 1',icon:'🤖',color:'var(--green)',weeklyDone:{},proofNote:'',proofDesc:'Photos + video demos + written portfolio',tasks:[
+    {id:'t1',text:"Ohm's Law — 20 calculations (≥18 correct)",done:false},
+    {id:'t2',text:'Build 5 breadboard circuits (photos)',done:false},
+    {id:'t3',text:'Arduino IDE + LED control code (video)',done:false},
+    {id:'t4',text:'Motor driver + wheel setup — fwd/back movement',done:false},
+    {id:'t5',text:'Ultrasonic sensor — live distance readings',done:false},
+    {id:'t6',text:'Obstacle detection robot — avoids object autonomously',done:false},
+    {id:'t7',text:'Servo motor — controlled angle movement',done:false},
+    {id:'t8',text:'Line-following robot — follows track',done:false},
+    {id:'t9',text:'Written portfolio report — all projects documented',done:false},
+  ]},
+  {id:'sk_piano',name:'Piano',category:'Music · Year 1',icon:'🎹',color:'var(--purple)',weeklyDone:{},proofNote:'',proofDesc:'Scale recordings + song playthrough + performance video',tasks:[
+    {id:'t1',text:'Finger independence drills — daily practice established',done:false},
+    {id:'t2',text:'C + G + D major scales hands together at 80 BPM',done:false},
+    {id:'t3',text:'Full beginner song from memory start to finish',done:false},
+    {id:'t4',text:'Chord transitions I-IV-V-I in 3 keys at 70 BPM',done:false},
+    {id:'t5',text:'Dynamics — clear soft vs loud contrast',done:false},
+    {id:'t6',text:'Second full song learned completely',done:false},
+    {id:'t7',text:'Sight-reading — play unseen sheet at steady tempo',done:false},
+    {id:'t8',text:'4 recorded weekly practice sessions',done:false},
+    {id:'t9',text:'Record one continuous performance take',done:false},
+  ]},
+  {id:'sk_maths',name:'Discrete Mathematics',category:'University · Sem 1 2026',icon:'∑',color:'var(--goldC)',weeklyDone:{},proofNote:'',proofDesc:'All grades ≥75%. Canvas submission receipts saved.',tasks:[
+    {id:'t1',text:'Tutorial Prep — 5 sessions across semester',done:false},
+    {id:'t2',text:'Mid-Semester Test ≥75% (Fri 27 Mar, 2:30pm)',done:false},
+    {id:'t3',text:'Written Assignment ≥75% (due Sun 12 Apr)',done:false},
+    {id:'t4',text:'End-Semester Test ≥75% (Tue 13 May, 1:30pm)',done:false},
+    {id:'t5',text:'Investigative Report ≥75% (due Sun 17 May)',done:false},
+  ]},
+  {id:'sk_softtech',name:'Software Technology 1',category:'University · Sem 1 2026',icon:'💻',color:'var(--blue)',weeklyDone:{},proofNote:'',proofDesc:'All Canvas receipts. All marks ≥72%.',tasks:[
+    {id:'t1',text:'Quiz 1 ≥72% (Fri 14 Mar)',done:false},
+    {id:'t2',text:'Quiz 2 ≥72% (Fri 28 Mar)',done:false},
+    {id:'t3',text:'Case Study + Quiz 3 ≥72% (Fri 11 Apr)',done:false},
+    {id:'t4',text:'Quiz 4 ≥72% (Fri 25 Apr)',done:false},
+    {id:'t5',text:'Programming Project ≥72% (Fri 9 May)',done:false},
+  ]},
+  {id:'sk_cyber',name:'Intro Cyber Security',category:'University · Sem 1 2026',icon:'🔐',color:'var(--red)',weeklyDone:{},proofNote:'',proofDesc:'All receipts. Group formed by Wk5.',tasks:[
+    {id:'t1',text:'Quiz 1 ≥72% (Mon 9 Mar)',done:false},
+    {id:'t2',text:'Weekly Engagement Quizzes — 2% × 10 weeks',done:false},
+    {id:'t3',text:'Quiz 2 Mid-Term ≥72% (Wk6 tute — in person)',done:false},
+    {id:'t4',text:'Group Report ≥72% (Fri 9 May)',done:false},
+    {id:'t5',text:'Quiz 3 Eval ≥72% (Wk13 tute — in person)',done:false},
+  ]},
+  {id:'sk_innov',name:'Tech Innovation & Entrepreneurship',category:'University · Sem 1 2026',icon:'🚀',color:'var(--cyan)',weeklyDone:{},proofNote:'',proofDesc:'All Canvas receipts. Logbook weekly from Wk3.',tasks:[
+    {id:'t1',text:'Quiz Part 1 ≥72% (Fri 14 Mar)',done:false},
+    {id:'t2',text:'Peer Review 1 ≥72% (Fri 28 Mar)',done:false},
+    {id:'t3',text:'Quiz Part 2 ≥72% (Fri 11 Apr)',done:false},
+    {id:'t4',text:'Business Plan Report ≥72% (Fri 2 May)',done:false},
+    {id:'t5',text:'Logbook + Peer Review 2 ≥72% (Fri 9 May)',done:false},
+    {id:'t6',text:'Elevator Pitch ≥72% (Wk 12/13 tute)',done:false},
+    {id:'t7',text:'Quiz Part 3 ≥72% (Week 14)',done:false},
+  ]},
+];}
+
+// ════════════════════════════════════════════════════
+// WEEKLY OBJECTIVES
+// ════════════════════════════════════════════════════
+const WO={
+  sk_python:{1:["Set up Python + PyCharm IDE","Write first 'Hello World' script","Learn variables and data types"],2:["Write a temperature converter","Write a basic calculator script","Practice f-strings and formatting"],3:["Complete scripts 6–10 (unit converter, guess game, etc.)","Practice conditionals (if/elif/else)","Write a number guessing game"],4:["Write a password validator program","Solidify loops (for + while)","Ensure all 10 scripts run error-free"],5:["Learn functions — refactor calculator","Write modular calculator with separate functions","Understand scope and return values"],6:["Learn lists and dictionaries","Build contact list (add / remove / search)","Explore classes intro"],7:["Split project into files using imports","Run a multi-file program successfully"],8:["Learn try/except/finally error handling","Make all programs handle invalid input","Begin Case Study problems"],9:["Class free — review all Python work","Demo Case Study to tutor","Fix remaining failing scripts"],10:["Write a program fetching live API data","Display results in terminal","Explore the requests library"],11:["Implement stack data structure","Implement queue data structure","Begin ≥300 line Python project"],12:["Polish and complete project","Write group report (1000–1500 words)","Prepare demo"],13:["Upload all projects to GitHub","Final demo and presentation","Reflect on semester"],},
+  sk_networking:{1:["Begin OSI model — layers 1–4","Write each layer name and function"],2:["Complete OSI model — layers 5–7","Write full OSI from memory"],3:["Draw OSI diagram from memory in under 5 min","Add protocols to each layer","Quiz: name 2 protocols per layer"],4:["Begin IPv4 — binary, octets, CIDR","Solve first 10 subnetting problems"],5:["Solve 30 subnetting problems (aim ≥27 correct)","Understand subnet masks"],6:["Learn routing basics","Simulate basic network topology in Packet Tracer"],7:["Learn switching fundamentals","Configure VLAN simulation in Packet Tracer"],8:["Learn wireless standards (802.11 a/b/g/n/ac/ax)","Write WPA2 vs WPA3 comparison"],9:["Class free — review networking notes Wks 1–8"],10:["Configure DNS + DHCP simulation"],11:["Study network security fundamentals","Write 5 attack types + defenses"],12:["Write all 10 attack types + defenses","Design full lab topology"],13:["Complete and save full network lab file","Create certification study plan"],},
+  sk_robotics:{1:["Study Ohm's Law","Solve first 5 circuit calculations"],2:["Solve 20 circuit calculations (aim ≥18 correct)","Identify resistor values by colour bands"],3:["Build breadboard circuit #1 — LED + resistor","Build breadboard circuit #2 — LED + switch"],4:["Build breadboard circuits #3, #4, #5","Take photos of all 5"],5:["Install Arduino IDE","Write and upload LED blink code","Record video of LED pattern"],6:["Set up motor driver module","Wire two DC motors","Test forward/backward movement"],7:["Integrate ultrasonic sensor (HC-SR04)","Display live distance readings"],8:["Program obstacle detection","Test: robot avoids object autonomously"],9:["Class free — refine robot code"],10:["Add servo motor — program angle sweep","Test 0°, 90°, 180°"],11:["Build line-following robot","Test: follows black line track"],12:["Finalise all robot behaviours","Begin portfolio documentation"],13:["Complete portfolio — photos, videos, write-up"],},
+  sk_piano:{1:["Finger independence drills — 10 min daily","Learn hand position","Play C major scale right hand only"],2:["C major scale hands together — 60 BPM","G major scale right hand","Continue drills daily"],3:["C + G scales hands together — 80 BPM","Begin D major scale","15 min practice daily"],4:["D major scale hands together — 90 BPM","Use metronome — all 3 scales"],5:["Choose beginner song","Learn first half — each hand separately"],6:["Full beginner song hands together — slow tempo","Learn I–IV chord transitions in 3 keys"],7:["Add I–V–I transitions","Smooth at 70 BPM — no pausing"],8:["Full beginner song from memory","Dynamics — soft vs loud on same phrase"],9:["Class free — daily practice"],10:["Choose second song","Learn first half — record one session"],11:["Learn full second song","Sight-read one new piece"],12:["Record 4 sessions this week","Prepare final recording repertoire"],13:["Record continuous performance take","Write out final repertoire list"],},
+  sk_maths:{1:["Read Ch 1.1–1.3: Speaking Mathematically","Tutorial prep (engagement mark)","Attend Tue 1:30pm lecture"],2:["Read Ch 2.1–2.3: Logic Statements","Practice truth tables","Tutorial prep"],3:["Read Ch 2.4, 3.1–3.2: Digital Logic Circuits","Convert logic expressions to circuits","Attend tutorial"],4:["Read Ch 4.1–4.6: Number Theory + Proof","Practice direct proofs","Tutorial prep due"],5:["Read Ch 5.1–5.2, 5.6–5.7: Sequences + Induction","Practice induction proofs","Written Assignment questions released — read now"],6:["⚠ MID-SEMESTER TEST: Fri 27 Mar, 2:30pm, 2B09","Build open-book summary sheet","Revise Weeks 1–5"],7:["Read Ch 8.1–8.3, 8.5: Relations","Understand equivalence relations","Tutorial prep"],8:["Read Ch 9.1–9.5, 9.8: Counting + Probability","⚠ WRITTEN ASSIGNMENT due Sun 12 Apr"],9:["Class free — review Sets notes","Re-read difficult proofs"],10:["Read Ch 1.4, 10.1: Graphs intro","Understand vertices and edges","Read Investigative Report brief on Canvas"],11:["Read Ch 10.4, 10.6: Trees","Practice Prim's/Kruskal's algorithm","Begin Investigative Report"],12:["Read Ch 12.1–12.2: Regex + Automata","Practice FSA diagrams","Continue report — near-final draft"],13:["⚠ END-SEMESTER TEST: Tue 13 May, 1:30pm","⚠ INVESTIGATIVE REPORT due Sun 17 May","Revise Weeks 6–12"],},
+  sk_softtech:{1:["Install PyCharm IDE","Complete Week 1 lab: I/O basics"],2:["Week 2 lab: decision + boolean logic","Practice if/elif/else"],3:["Week 3 lab: repetition structures","Quiz 1 covers Wks 1–3 — begin revision"],4:["⚠ QUIZ 1 due Fri 23:59","Week 4 lab: Python functions"],5:["Week 5 lab: files, lists, exceptions","Write code reading/writing a .txt file"],6:["Week 6 lab: classes and objects","⚠ QUIZ 2 due Fri 23:59"],7:["Week 7 lab: Pandas + Jupyter","Load CSV, display stats"],8:["Week 8 lab: Pandas data prep","⚠ QUIZ 3 + CASE STUDY due Fri 23:59"],9:["Class free — polish Case Study","⚠ Assign to project group by Mon 23:59"],10:["Week 10 lab: data visualisation","⚠ QUIZ 4 due Fri 23:59"],11:["Week 11 lab: prediction studies","Begin programming project"],12:["⚠ PROJECT DEMO in tute","⚠ FINAL REPORT due Fri 23:59"],13:["⚠ QUIZ 5 due Fri"],},
+  sk_cyber:{1:["Read intro slides: Computers, Network, Security, Ethics","Understand CIA triad"],2:["Read Limoncelli Ch1 — Desktop Computers","Complete tute/lab","Weekly engagement quiz (2%)"],3:["Read Limoncelli Ch2 — Server Computers","Complete tute/lab","Weekly engagement quiz"],4:["Read Limoncelli Ch15 — Helpdesk","⚠ QUIZ 1 due Mon 23:59","Complete tute/lab"],5:["Read Pfleeger Ch2 + Stallings Ch2 — Cryptography","⚠ Form group by Fri 23:59 on Canvas"],6:["Read Stallings Ch6 — Malicious Software","⚠ QUIZ 2 MID-TERM in tute — IN PERSON"],7:["Read Stallings Ch7+9 — DoS + Firewalls","Begin group report research"],8:["Read Stallings Ch10+11 — Buffer Overflow","First draft of group report"],9:["Class free — continue group report"],10:["Read Stallings Ch12+27 — OS Security","Second draft review"],11:["Read Stallings Ch3+4 — Auth + Access Control","Near-final report + peer eval prep"],12:["Read Stallings Ch22–24 — Network Security","⚠ GROUP REPORT + PEER EVAL due Fri 23:59"],13:["⚠ QUIZ 3 EVAL in tute — IN PERSON"],},
+  sk_innov:{1:["Attend Week 1 lecture","Read unit outline"],2:["Form your team","Complete teambuilding in tute"],3:["⚠ Register team on Canvas","⚠ Begin Logbook (required from Week 3)","Empathy map in tute"],4:["⚠ QUIZ PART 1 due Fri","Build user empathy map","Two POV statements"],5:["Apply sci-fi concept to prototype","Begin prototype"],6:["Marketing workshop — positioning strategy","Identify IP assets","Update Logbook"],7:["⚠ PEER REVIEW 1 due Fri 23:59","IP workshop","Update Logbook"],8:["Business Model Canvas — all 9 blocks","Value Proposition Canvas","⚠ QUIZ PART 2 due Fri"],9:["Class free — work on Business Plan Report"],10:["Level 1 innovation accounting dashboard","Continue Business Plan Report"],11:["⚠ BUSINESS PLAN REPORT due Fri 23:59","Update Logbook"],12:["⚠ LOGBOOK + PEER REVIEW 2 + PITCH due Fri 23:59","⚠ PITCH SESSION #1 in tute"],13:["⚠ PITCH SESSION #2 in tute","Ethics workshop","Final Logbook entry"],14:["⚠ QUIZ PART 3 due","Reflect on semester","Archive all files"],},
+};
+
+// ════════════════════════════════════════════════════
+// WEEK SELECT
+// ════════════════════════════════════════════════════
+function populateWeekSel(){
+  const data=loadData(),cur=data.currentWeek||3,view=data.viewingWeek||cur;
+  const sem=data.semesters[data.currentSemester];
+  const totalWeeks=(sem&&sem.totalWeeks)||13;
+  const sel=document.getElementById('weekSelect');
+  sel.innerHTML='';
+  for(let w=1;w<=totalWeeks;w++){const o=document.createElement('option');o.value=w;o.textContent='WEEK '+w+(w===cur?' ★':'');o.selected=(w===view);sel.appendChild(o);}
+  document.getElementById('curWeekBadge').style.opacity=(view===cur)?'1':'0.3';
+}
+function onWeekChange(v){const data=loadData();data.viewingWeek=parseInt(v);save(data);document.getElementById('curWeekBadge').style.opacity=(parseInt(v)===(data.currentWeek||3))?'1':'0.3';renderSkills(data);}
+
+// ════════════════════════════════════════════════════
+// LICENSE PANEL
+// ════════════════════════════════════════════════════
+function renderLicensePanel(){
+  const data=loadData();
+  const sem=data.semesters[data.currentSemester];
+  const cw=data.currentWeek||3;
+  const playerName=(data.playerName||'PLAYER').toUpperCase();
+  const panel=document.getElementById('licensePanel');
+
+  if(!sem||!sem.skills.length){panel.innerHTML='';return;}
+
+  // calculate overall average
+  const avg=Math.round(sem.skills.reduce((s,sk)=>s+pct(sk,cw),0)/sem.skills.length);
+  const og=getGrade(avg);
+  const ng=nextGrade(og);
+  const progressToNext=ng?(avg-og.min)/(ng.min-og.min)*100:100;
+  const needed=ng?ng.min-avg:0;
+
+  panel.innerHTML=`
+    <div class="lic-card ${og.licClass}">
+      <div class="lic-top-bar"></div>
+      <div class="lic-body">
+        <div class="lic-tier-row">
+          <span class="lic-gem">${og.gem}</span>
+          <span class="lic-tier">${og.tier}</span>
+        </div>
+        <div class="lic-grade-label">${og.short} GRADE</div>
+        <div class="lic-name">▸ ${playerName}</div>
+        <div class="lic-divider"></div>
+        <div class="lic-prog-label">${ng?'PROGRESS TO '+ng.short:'MAX GRADE REACHED'}</div>
+        <div class="lic-bar-bg"><div class="lic-bar-fill" style="width:${Math.min(progressToNext,100)}%"></div></div>
+        <div class="lic-next">${ng?needed+'% more for '+ng.short+'  ·  '+avg+'% now':'✦ RUBY — Top tier'}</div>
+      </div>
+      <div class="lic-watermark">${og.watermark}</div>
+    </div>`;
+}
+
+// ════════════════════════════════════════════════════
+// RENDER
+// ════════════════════════════════════════════════════
+function render(){
+  const _ak=sessionStorage.getItem('aria_key');if(_ak){window.ARIA_KEY=_ak;const _ki=document.getElementById('ariaKeyInput');if(_ki&&!_ki.value)_ki.value=_ak;}
+  const data=loadData(),sem=data.semesters[data.currentSemester];
+  // Restore aria key from Firestore data if sessionStorage doesn't have it
+  if(data.ariaKey&&!window.ARIA_KEY){window.ARIA_KEY=data.ariaKey;sessionStorage.setItem('aria_key',data.ariaKey);}
+  const _ki2=document.getElementById('ariaKeyInput');if(_ki2&&!_ki2.value&&data.ariaKey)_ki2.value=data.ariaKey;
+  document.getElementById('playerNameDisplay').textContent=data.playerName||'PLAYER';
+  const og=getOverallGrade(data);
+  document.getElementById('overallRankDisplay').textContent='⬡ '+og.short+' GRADE';
+  document.getElementById('overallRankDisplay').style.color=og.color;
+  document.getElementById('overallRankDisplay').style.borderColor=og.color;
+  document.getElementById('semesterBadgeDisplay').textContent=sem?sem.name.toUpperCase():'—';
+  const sel=document.getElementById('semesterSelect');
+  sel.innerHTML=Object.entries(data.semesters).map(([id,s])=>`<option value="${id}" ${id===data.currentSemester?'selected':''}>${s.name}</option>`).join('');
+  document.getElementById('playerNameInput').value=data.playerName||'';
+  document.getElementById('currentWeekInput').value=data.currentWeek||3;
+  if(sem)document.getElementById('semesterNameInput').value=sem.name;
+  populateWeekSel();
+  renderSkills(data);
+  renderStats(data,sem);
+  renderLicensePanel();
+}
+
+function renderSkills(data){
+  const sem=data.semesters[data.currentSemester];
+  const grid=document.getElementById('skillsGrid');
+  if(!sem||!sem.skills.length){grid.innerHTML='<div style="text-align:center;padding:80px 20px;color:var(--text-dim);font-family:Share Tech Mono,monospace;font-size:12px;letter-spacing:1px">NO SKILLS REGISTERED · ADD ONE BELOW</div>';return;}
+  const week=data.viewingWeek||data.currentWeek||3;
+  const cw=data.currentWeek||3;
+  grid.innerHTML=sem.skills.map(sk=>card(sk,week,cw,data)).join('');
+}
+
+function card(sk,week,cw,data){
+  const p=pct(sk,cw),grade=getGrade(p);
+  const playerName=(data.playerName||'PLAYER').toUpperCase();
+  // Combine built-in and custom weekly objectives
+  const builtInObjs=(WO[sk.id]||{})[week]||[];
+  const customObjs=(sk.weeklyObjectives&&sk.weeklyObjectives[week])||[];
+  const objs=[...builtInObjs,...customObjs];
+  const wkDone=(sk.weeklyDone||{})[week]||[];
+  const allObjsDone=objs.length>0&&wkDone.length>=objs.length;
+  const weeklyHTML=objs.length
+    ?`<div class="weekly-section${allObjsDone?' all-done':''}"><div class="weekly-header"><div class="weekly-tag">⚡ WEEK ${week} OBJECTIVES</div><div class="weekly-count">${Math.min(wkDone.length,objs.length)}/${objs.length} DONE${allObjsDone?' ✦':''}</div></div><div class="weekly-obj-list">${objs.map((obj,i)=>{const d=wkDone.includes(i);return`<div class="wobj-item ${d?'done':''}" onclick="toggleWobj('${sk.id}',${week},${i})"><div class="wobj-check ${d?'done':''}"></div><span class="wobj-text">${obj}</span></div>`;}).join('')}</div></div>`
+    :`<div class="weekly-section"><div class="no-weekly">NO OBJECTIVES FOR WEEK ${week}</div></div>`;
+  const woMap=WO[sk.id]||{};const customWO=sk.weeklyObjectives||{};let tot=0,don=0;
+  for(let w=1;w<=cw;w++){const all=(woMap[w]||[]).concat(customWO[w]||[]);tot+=all.length;don+=((sk.weeklyDone||{})[w]||[]).length;}
+  const ts=sk.tasks.length?Math.round(sk.tasks.filter(t=>t.done).length/sk.tasks.length*100):0;
+  const ws=tot>0?Math.round(don/tot*100):null;
+  const detail=ws!==null?`TASKS ${ts}% · WEEKLY ${ws}%`:'OVERALL PROGRESS';
+  const taskRows=sk.tasks.map(t=>`<div class="task-item ${t.done?'done':''}" onclick="toggleTask('${sk.id}','${t.id}')"><div class="task-check ${t.done?'done':''}"></div><span class="task-text">${t.text}</span></div>`).join('');
+  const slbStyle=`--slb-bg:${grade.licClass==='lic-ruby'?'rgba(204,34,68,0.12)':grade.licClass==='lic-gold'?'rgba(212,168,32,0.1)':grade.licClass==='lic-silver'?'rgba(176,184,200,0.1)':grade.licClass==='lic-bronze'?'rgba(205,127,50,0.1)':'rgba(96,112,128,0.1)'};--slb-border:${grade.licClass==='lic-ruby'?'rgba(204,34,68,0.25)':grade.licClass==='lic-gold'?'rgba(212,168,32,0.25)':grade.licClass==='lic-silver'?'rgba(176,184,200,0.2)':grade.licClass==='lic-bronze'?'rgba(205,127,50,0.2)':'rgba(96,112,128,0.18)'};--slb-color:${grade.color};--slb-glow:${grade.color}`;
+  // XP bar
+  const skXP=getSkillXP(sk.id);const lvData=getLevelFromXP(skXP);const streak=(data.streaks&&data.streaks[sk.id])||0;
+  const xpPct=lvData.needed>0?Math.round(lvData.current/lvData.needed*100):100;
+  return`<div class="skill-card ${p>=90?'special-grade':''}" style="--card-color:${sk.color}">
+    <button class="card-del" onclick="delSkill(event,'${sk.id}')">✕</button>
+    <div class="card-header" onclick="openEditSkillModal('${sk.id}')">
+      <div class="card-icon">${sk.icon||'⬡'}</div>
+      <div class="card-title-wrap"><div class="card-title">${sk.name}</div><div class="card-sub">${sk.category||''}</div></div>
+      <div class="grade-badge" style="color:${grade.color};border-color:${grade.color}">${grade.gem} ${grade.short}</div>
+    </div>
+    <div class="xp-section">
+      <div class="xp-labels"><span>${detail}</span><span class="pct-text" style="color:${grade.color}">${p}%</span></div>
+      <div class="xp-bar-bg"><div class="xp-bar-fill" style="width:${p}%"></div></div>
+    </div>
+    <div class="xp-system-bar">
+      <div class="xp-lv-badge">LV ${lvData.level}</div>
+      <div class="xp-prog-wrap">
+        <div class="xp-prog-row"><span>XP</span><span>${lvData.current}/${lvData.needed}</span></div>
+        <div class="xp-prog-bg"><div class="xp-prog-fill" style="width:${xpPct}%;background:${sk.color||'var(--blue)'}"></div></div>
+      </div>
+      ${streak>0?`<div class="xp-streak">🔥 ${streak}d</div>`:''}
+    </div>
+    ${weeklyHTML}
+    ${sk.tasks.length?`<div class="tasks-section"><button class="tasks-toggle" onclick="toggleTasks(this)">▸ ALL TASKS (${sk.tasks.filter(t=>t.done).length}/${sk.tasks.length})</button><div class="tasks-inner">${taskRows}</div></div>`:''}
+    <div class="proof-section"><div class="proof-label">PROOF OF COMPLETION</div><textarea class="proof-input" placeholder="${sk.proofDesc||'Add proof notes...'}" onclick="event.stopPropagation()" onchange="saveProof('${sk.id}',this.value)">${sk.proofNote||''}</textarea></div>
+    <div class="skill-lic-badge" style="${slbStyle}">
+      <span class="slb-gem">${grade.gem}</span>
+      <span class="slb-tier">${grade.short}</span>
+      <span class="slb-sep">·</span>
+      <span class="slb-player">${playerName}</span>
+      <span class="slb-grade">${grade.tier}</span>
+    </div>
+  </div>`;
+}
+
+function toggleTasks(btn){const inner=btn.nextElementSibling;inner.classList.toggle('open');const o=inner.classList.contains('open');const m=btn.textContent.match(/\(.*\)/)?.[0]||'';btn.textContent=(o?'▾':'▸')+' ALL TASKS '+m;}
+
+function renderStats(data,sem){
+  if(!sem){document.getElementById('statsGrid').innerHTML='';return;}
+  const cw=data.currentWeek||3;
+  const sks=sem.skills,total=sks.reduce((s,sk)=>s+sk.tasks.length,0),done=sks.reduce((s,sk)=>s+sk.tasks.filter(t=>t.done).length,0);
+  const avg=sks.length?Math.round(sks.reduce((s,sk)=>s+pct(sk,cw),0)/sks.length):0;
+  const rubies=sks.filter(sk=>pct(sk,cw)>=90).length,golds=sks.filter(sk=>{const p2=pct(sk,cw);return p2>=75&&p2<90;}).length;
+  document.getElementById('statsGrid').innerHTML=[
+    {num:sks.length,label:'REGISTERED SKILLS',color:'var(--blue)'},{num:`${done}/${total}`,label:'TASKS COMPLETE',color:'var(--cyan)'},
+    {num:`${avg}%`,label:'AVERAGE PROGRESS',color:getGrade(avg).color},{num:rubies,label:'SPECIAL GRADE SKILLS',color:'var(--ruby)'},
+    {num:golds,label:'1ST GRADE SKILLS',color:'var(--goldC)'},{num:Object.keys(data.semesters).length,label:'SEMESTERS LOGGED',color:'var(--grey)'},
+  ].map(s=>`<div class="stat-card" style="--card-color:${s.color}"><div class="stat-num" style="color:${s.color}">${s.num}</div><div class="stat-label">${s.label}</div></div>`).join('');
+}
+
+// ════════════════════════════════════════════════════
+// INTERACTIONS
+// ════════════════════════════════════════════════════
+function toggleWobj(skillId,week,idx){
+  const data=loadData(),sem=data.semesters[data.currentSemester];
+  const sk=sem.skills.find(s=>s.id===skillId);if(!sk)return;
+  if(!sk.weeklyDone)sk.weeklyDone={};
+  if(!sk.weeklyDone[week])sk.weeklyDone[week]=[];
+  const a=sk.weeklyDone[week],pos=a.indexOf(idx);
+  const wasCompleting=(pos===-1);
+
+  // Snapshot before-state for bonus reversal check
+  const woMap=WO[sk.id]||{};
+  const customWO=sk.weeklyObjectives||{};
+  const allObjs=(woMap[week]||[]).concat(customWO[week]||[]);
+  const wasAllDone=allObjs.length>0&&a.length>=allObjs.length;
+
+  if(wasCompleting)a.push(idx);else a.splice(pos,1);
+  save(data);
+
+  if(wasCompleting){
+    // COMPLETING — award XP + streak bonus
+    const streak=updateStreak(skillId);
+    let xpGain=XP_PER_WOBJ;
+    const streakBonus=XP_STREAK_BONUS[Math.min(streak,XP_STREAK_BONUS.length-1)]||0;
+    xpGain+=streakBonus;
+    awardXP(skillId,xpGain,streakBonus>0?'🔥 STREAK BONUS':'');
+    // Check if ALL now done — award completion bonus
+    const freshDone=(loadData().semesters[data.currentSemester].skills.find(s=>s.id===skillId)?.weeklyDone||{})[week]||[];
+    if(allObjs.length>0&&freshDone.length>=allObjs.length){
+      awardXP(skillId,XP_WOBJ_ALL_BONUS,'WEEK COMPLETE');
+      setTimeout(()=>showWeeklyCompleteBurst(sk.name,week),200);
+    }
+  } else {
+    // UN-COMPLETING — deduct base objective XP
+    awardXP(skillId,-XP_PER_WOBJ,'UNDONE');
+    // If the all-complete bonus was previously awarded, reverse it too
+    if(wasAllDone){
+      awardXP(skillId,-XP_WOBJ_ALL_BONUS,'BONUS REVERSED');
+    }
+  }
+  renderSkills(loadData());renderLicensePanel();
+}
+function toggleTask(skillId,taskId){
+  const data=loadData(),sem=data.semesters[data.currentSemester];
+  const sk=sem.skills.find(s=>s.id===skillId);if(!sk)return;
+  const cw=data.currentWeek||3,prev=getGrade(pct(sk,cw));
+  const t=sk.tasks.find(t=>t.id===taskId);
+  const wasCompleting=t&&!t.done;
+  if(t)t.done=!t.done;
+  const nw=getGrade(pct(sk,cw));save(data);renderSkills(data);renderLicensePanel();
+  if(nw.rank>prev.rank)showRankUp(nw.label,sk.name);
+  if(wasCompleting){awardXP(skillId,XP_PER_TASK,'TASK DONE');}
+  else{awardXP(skillId,-XP_PER_TASK,'TASK UNDONE');}
+}
+function saveProof(skillId,val){const data=loadData(),sem=data.semesters[data.currentSemester];const sk=sem.skills.find(s=>s.id===skillId);if(sk){sk.proofNote=val;save(data);}}
+
+// ════════════════════════════════════════════════════
+// SKILL MODAL
+// ════════════════════════════════════════════════════
+let editId=null;
+function openAddSkillModal(){
+  editId=null;
+  document.getElementById('modalTitle').textContent='REGISTER NEW SKILL';
+  ['skillName','skillCategory','skillIcon','skillProofDesc'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('skillColor').value='var(--blue)';
+  document.getElementById('tasksBuilder').innerHTML='';
+  addTaskRow();addTaskRow();addTaskRow();
+  const data=loadData();const sem=data.semesters[data.currentSemester];const tw=(sem&&sem.totalWeeks)||13;
+  initWOBuilder({},tw);
+  document.getElementById('skillModal').classList.remove('hidden');
+}
+function openEditSkillModal(skillId){
+  const data=loadData(),sk=data.semesters[data.currentSemester].skills.find(s=>s.id===skillId);
+  if(!sk)return;editId=skillId;
+  document.getElementById('modalTitle').textContent='EDIT SKILL';
+  document.getElementById('skillName').value=sk.name;
+  document.getElementById('skillCategory').value=sk.category||'';
+  document.getElementById('skillIcon').value=sk.icon||'';
+  document.getElementById('skillColor').value=sk.color||'var(--blue)';
+  document.getElementById('skillProofDesc').value=sk.proofDesc||'';
+  document.getElementById('tasksBuilder').innerHTML='';
+  sk.tasks.forEach(t=>addTaskRow(t.text));
+  const sem=data.semesters[data.currentSemester];const tw=(sem&&sem.totalWeeks)||13;
+  initWOBuilder(sk.weeklyObjectives||{},tw);
+  document.getElementById('skillModal').classList.remove('hidden');
+}
+function addTaskRow(v=''){const d=document.createElement('div');d.className='task-row';d.innerHTML=`<input type="text" placeholder="Task description..." value="${v.replace(/"/g,'&quot;')}"><button class="rm-btn" onclick="this.parentElement.remove()">✕</button>`;document.getElementById('tasksBuilder').appendChild(d);}
+function saveSkill(){
+  const name=document.getElementById('skillName').value.trim();if(!name)return;
+  const data=loadData(),sem=data.semesters[data.currentSemester];
+  const tasks=Array.from(document.querySelectorAll('#tasksBuilder .task-row input')).map(i=>i.value.trim()).filter(Boolean).map((text,i)=>({id:'t'+(i+1),text,done:false}));
+  const cleanWO={};
+  Object.entries(_woData).forEach(([w,objs])=>{const f=objs.filter(o=>o&&o.trim());if(f.length)cleanWO[parseInt(w)]=f;});
+  if(editId){
+    const sk=sem.skills.find(s=>s.id===editId);
+    if(sk){const dm={};sk.tasks.forEach(t=>{dm[t.text]=t.done;});Object.assign(sk,{name,category:document.getElementById('skillCategory').value.trim(),icon:document.getElementById('skillIcon').value.trim()||'⬡',color:document.getElementById('skillColor').value,proofDesc:document.getElementById('skillProofDesc').value.trim(),weeklyObjectives:cleanWO});sk.tasks=tasks.map(t=>({...t,done:dm[t.text]||false}));}
+  } else {
+    sem.skills.push({id:'sk_'+Date.now(),name,category:document.getElementById('skillCategory').value.trim(),icon:document.getElementById('skillIcon').value.trim()||'⬡',color:document.getElementById('skillColor').value,proofDesc:document.getElementById('skillProofDesc').value.trim(),weeklyObjectives:cleanWO,proofNote:'',weeklyDone:{},tasks});
+  }
+  save(data);closeModal();render();
+}
+function delSkill(e,id){e.stopPropagation();if(!confirm('Remove this skill?'))return;const data=loadData();data.semesters[data.currentSemester].skills=data.semesters[data.currentSemester].skills.filter(s=>s.id!==id);save(data);render();}
+function closeModal(){document.getElementById('skillModal').classList.add('hidden');editId=null;}
+
+// ════════════════════════════════════════════════════
+// SEMESTER
+// ════════════════════════════════════════════════════
+function switchSemester(id){const d=loadData();d.currentSemester=id;d.viewingWeek=d.currentWeek||1;save(d);render();}
+function openNewSemesterModal(){document.getElementById('newSemName').value='';document.getElementById('newSemWeek').value='1';document.getElementById('newSemTotalWeeks').value='13';document.getElementById('semesterModal').classList.remove('hidden');}
+function createNewSemester(){const name=document.getElementById('newSemName').value.trim();if(!name)return;const d=loadData(),id='sem_'+Date.now();const tw=parseInt(document.getElementById('newSemTotalWeeks').value)||13;const sw=parseInt(document.getElementById('newSemWeek').value)||1;d.semesters[id]={name,totalWeeks:tw,skills:[]};d.currentSemester=id;d.currentWeek=sw;d.viewingWeek=sw;save(d);document.getElementById('semesterModal').classList.add('hidden');render();}
+function deleteCurrentSemester(){const d=loadData(),keys=Object.keys(d.semesters);if(keys.length<=1){alert('Cannot delete the only semester.');return;}if(!confirm('Delete this semester and all its skills?'))return;delete d.semesters[d.currentSemester];d.currentSemester=Object.keys(d.semesters)[0];save(d);render();}
+function updateSemesterName(val){const d=loadData();if(d.semesters[d.currentSemester]){d.semesters[d.currentSemester].name=val;save(d);}document.getElementById('semesterBadgeDisplay').textContent=val.toUpperCase();const o=document.querySelector(`#semesterSelect option[value="${d.currentSemester}"]`);if(o)o.textContent=val;}
+
+// ════════════════════════════════════════════════════
+// SETTINGS
+// ════════════════════════════════════════════════════
+function savePlayerName(val){const d=loadData();d.playerName=val;save(d);document.getElementById('playerNameDisplay').textContent=val||'PLAYER';renderLicensePanel();renderSkills(d);}
+function saveAriaKey(val){const k=val.trim();window.ARIA_KEY=k;sessionStorage.setItem('aria_key',k);const d=loadData();d.ariaKey=k;save(d);}
+function saveCurrentWeek(val){const w=parseInt(val);if(isNaN(w)||w<1||w>20)return;const d=loadData();d.currentWeek=w;d.viewingWeek=w;save(d);populateWeekSel();renderSkills(d);renderLicensePanel();}
+function clearAllData(){if(!confirm('RESET ALL DATA? This cannot be undone.'))return;_dataCache=dflt();saveRemote(_dataCache);render();}
+
+function resetXPOnly(){
+  if(!confirm('Reset ALL XP and levels? Task/weekly progress will be kept.')) return;
+  const d = loadData();
+  d.xp = {};
+  d.streaks = {};
+  d.streakDates = {};
+  save(d);
+  render();
+  renderXPGlobal();
+  showXPToast('XP RESET');
+}
+
+function resetStreaksOnly(){
+  if(!confirm('Reset all streaks only?')) return;
+  const d = loadData();
+  d.streaks = {};
+  d.streakDates = {};
+  save(d);
+  render();
+  renderXPGlobal();
+  showXPToast('STREAKS RESET');
+}
+
+// ════════════════════════════════════════════════════
+// RANK UP
+// ════════════════════════════════════════════════════
+function showRankUp(label,skillName){
+  document.getElementById('ruGradeText').textContent=label;
+  document.getElementById('ruSkillText').textContent=skillName.toUpperCase();
+  document.getElementById('rankUpNotif').classList.add('show');
+  speak(`Amazing! ${skillName} just ranked up to ${label}! Keep going!`,{rate:1.1,pitch:1.2});
+}
+function closeRankUp(){document.getElementById('rankUpNotif').classList.remove('show');}
+
+// ════════════════════════════════════════════════════
+// NAV
+// ════════════════════════════════════════════════════
+function switchView(view,btn){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('view-'+view).classList.add('active');btn.classList.add('active');
+  if(view==='stats')renderStats(loadData(),loadData().semesters[loadData().currentSemester]);
+  if(view==='xp')renderXPGlobal();
+}
+// NAME ENTRY
+// ════════════════════════════════════════════════════
+function confirmName(){
+  const val=document.getElementById('nameEntryInput').value.trim();
+  const err=document.getElementById('nameEntryErr');
+  if(!val){err.textContent='NAME CANNOT BE EMPTY';return;}
+  if(val.length<2){err.textContent='NAME TOO SHORT';return;}
+  err.textContent='';
+  const d=loadData();d.playerName=val.toUpperCase();save(d);
+  const ns=document.getElementById('nameScreen');
+  ns.style.transition='opacity 0.6s';ns.style.opacity='0';
+  setTimeout(()=>{
+    ns.classList.remove('show');ns.style.opacity='';ns.style.transition='';
+    const ss=document.getElementById('startScreen');
+    ss.classList.remove('continue-mode');ss.classList.add('show');
+  },600);
+}
+
+// ════════════════════════════════════════════════════
+// XP SYSTEM
+// ════════════════════════════════════════════════════
+const XP_PER_TASK=30;
+const XP_PER_WOBJ=20;
+const XP_WOBJ_ALL_BONUS=50; // bonus for completing all weekly objs
+const XP_STREAK_BONUS=[0,0,10,20,30,50,75,100]; // extra xp at streak lengths
+
+function xpForLevel(lv){return lv<=1?0:100+((lv-1)*80);}
+function getLevelFromXP(xp){let lv=1,acc=0;while(acc+xpForLevel(lv+1)<=xp){acc+=xpForLevel(lv+1);lv++;}return{level:lv,current:xp-acc,needed:xpForLevel(lv+1)};}
+
+function getSkillXP(skillId){const d=loadData();return(d.xp&&d.xp[skillId])||0;}
+function getSkillStreak(skillId){const d=loadData();return(d.streaks&&d.streaks[skillId])||0;}
+
+function awardXP(skillId,amount,label){
+  const d=loadData();
+  if(!d.xp)d.xp={};
+  const prev=d.xp[skillId]||0;
+  // Never go below 0
+  d.xp[skillId]=Math.max(0,prev+amount);
+  save(d);
+  if(amount>0)showXPToast('+'+amount+' XP'+(label?' · '+label:''));
+  else if(amount<0)showXPToast(amount+' XP'+(label?' · '+label:''));
+}
+
+function updateStreak(skillId){
+  const d=loadData();
+  if(!d.streaks)d.streaks={};
+  if(!d.streakDates)d.streakDates={};
+  const today=new Date().toDateString();
+  const last=d.streakDates[skillId];
+  const yesterday=new Date(Date.now()-86400000).toDateString();
+  let streak=d.streaks[skillId]||0;
+  if(last===today){return streak;} // already logged today
+  if(last===yesterday||!last){streak++;}else{streak=1;}
+  d.streaks[skillId]=streak;d.streakDates[skillId]=today;
+  save(d);
+  return streak;
+}
+
+let _xpToastTimer=null;
+function showXPToast(msg){
+  const t=document.getElementById('xpToast'),txt=document.getElementById('xpToastTxt');
+  txt.textContent=msg;t.classList.add('show');
+  if(_xpToastTimer)clearTimeout(_xpToastTimer);
+  _xpToastTimer=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+function renderXPGlobal(){
+  const data=loadData(),sem=data.semesters[data.currentSemester];
+  const panel=document.getElementById('xpGlobalPanel');if(!panel)return;
+  if(!sem||!sem.skills.length){panel.innerHTML='<div style="text-align:center;padding:80px 20px;color:var(--text-dim);font-family:Share Tech Mono,monospace;font-size:12px;letter-spacing:1px">NO SKILLS REGISTERED YET</div>';return;}
+  const cw=data.currentWeek||3;
+  // Total XP summary
+  const totalXP=Object.values(data.xp||{}).reduce((s,v)=>s+v,0);
+  const tl=getLevelFromXP(totalXP);
+  const allStreaks=Object.values(data.streaks||{});
+  const maxStreak=allStreaks.length?Math.max(...allStreaks):0;
+  panel.innerHTML=`
+    <div class="stats-grid" style="margin-bottom:32px">
+      <div class="stat-card" style="--card-color:var(--cyan)"><div class="stat-num" style="color:var(--cyan)">${totalXP}</div><div class="stat-label">TOTAL XP EARNED</div></div>
+      <div class="stat-card" style="--card-color:var(--blue)"><div class="stat-num" style="color:var(--blue)">LV ${tl.level}</div><div class="stat-label">OVERALL SYSTEM LEVEL</div></div>
+      <div class="stat-card" style="--card-color:var(--gold)"><div class="stat-num" style="color:var(--gold)">${maxStreak}</div><div class="stat-label">LONGEST ACTIVE STREAK</div></div>
+    </div>
+    <div class="xp-global-wrap">
+      <h2>SKILL XP & STREAKS</h2>
+      <div class="xp-skill-rows">${sem.skills.map(sk=>{
+        const xp=getSkillXP(sk.id);const lv=getLevelFromXP(xp);const streak=(data.streaks&&data.streaks[sk.id])||0;
+        const pct2=Math.min(lv.needed>0?Math.round(lv.current/lv.needed*100):100,100);
+        let rewardBadge='';
+        if(streak>=7)rewardBadge='🔥 WEEK STREAK';else if(streak>=3)rewardBadge='⚡ ON A ROLL';
+        return`<div class="xp-sk-row">
+          <div class="xp-sk-icon">${sk.icon||'⬡'}</div>
+          <div class="xp-sk-info">
+            <div class="xp-sk-name">${sk.name} ${rewardBadge?'<span style="font-size:9px;color:var(--gold);margin-left:6px">'+rewardBadge+'</span>':''}</div>
+            <div class="xp-sk-bar-bg"><div class="xp-sk-bar-fill" style="width:${pct2}%;background:${sk.color||'var(--blue)'}"></div></div>
+            <div class="xp-sk-meta"><span class="xp-sk-lv">LV ${lv.level}</span><span class="xp-sk-pts">${xp} XP · ${lv.current}/${lv.needed} to LV${lv.level+1}</span>${streak?`<span class="xp-sk-streak">🔥 ${streak}-DAY STREAK</span>`:'<span class="xp-sk-streak" style="opacity:0.3">NO STREAK</span>'}</div>
+          </div>
+        </div>`;}).join('')}
+      </div>
+    </div>
+    <div style="margin-top:32px;padding-top:24px;border-top:1px solid var(--border)">
+      <div style="font-family:Share Tech Mono,monospace;font-size:10px;color:var(--text-dim);letter-spacing:2px;margin-bottom:16px">STREAK REWARDS</div>
+      <div style="display:grid;gap:8px">
+        ${[{days:3,reward:'+20 bonus XP per objective',icon:'⚡'},{days:7,reward:'+75 bonus XP + 🔥 FIRE badge',icon:'🔥'},{days:14,reward:'+150 bonus XP + rank-up sound',icon:'💥'},{days:30,reward:'+300 bonus XP + LEGENDARY status',icon:'👑'}].map(r=>`<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--panel2);border:1px solid var(--border)"><span style="font-size:16px">${r.icon}</span><span style="font-family:Orbitron,sans-serif;font-size:9px;color:var(--gold);letter-spacing:2px">${r.days}-DAY STREAK</span><span style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--text-dim);margin-left:auto">${r.reward}</span></div>`).join('')}
+      </div>
+    </div>
+    <div style="margin-top:32px;padding-top:24px;border-top:1px solid var(--border)">
+      <div style="font-family:Share Tech Mono,monospace;font-size:10px;color:var(--text-dim);letter-spacing:2px;margin-bottom:16px">DANGER ZONE</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <button onclick="resetXPOnly()" style="background:none;border:1px solid rgba(255,51,85,0.3);color:rgba(255,51,85,0.5);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;padding:10px 20px;cursor:pointer;transition:all 0.2s;" onmouseenter="this.style.borderColor='var(--red)';this.style.color='var(--red)'" onmouseleave="this.style.borderColor='rgba(255,51,85,0.3)';this.style.color='rgba(255,51,85,0.5)'>RESET XP &amp; LEVELS</button>
+        <button onclick="resetStreaksOnly()" style="background:none;border:1px solid rgba(255,51,85,0.3);color:rgba(255,51,85,0.5);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;padding:10px 20px;cursor:pointer;transition:all 0.2s;" onmouseenter="this.style.borderColor='var(--red)';this.style.color='var(--red)'" onmouseleave="this.style.borderColor='rgba(255,51,85,0.3)';this.style.color='rgba(255,51,85,0.5)'>RESET STREAKS ONLY</button>
+      </div>
+      <div style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:1px;opacity:0.6">XP reset zeros all skill levels. Task/weekly progress is preserved.</div>
+    </div>`;
+}
+
+// ════════════════════════════════════════════════════
+// WEEKLY COMPLETE SOUND & ANIMATION
+// ════════════════════════════════════════════════════
+let _burstTimer=null;
+function showWeeklyCompleteBurst(skillName,week){
+  document.getElementById('wcbSub').textContent=skillName.toUpperCase()+' · WEEK '+week;
+  const el=document.getElementById('wkCompleteBurst');
+  el.classList.add('show');
+  if(_burstTimer)clearTimeout(_burstTimer);
+  _burstTimer=setTimeout(()=>el.classList.remove('show'),3000);
+  // play a special weekly-complete sound
+  sndWeeklyComplete();
+  speak(`Week ${week} objectives complete for ${skillName}!`,{rate:1.05});
+}
+
+// ════════════════════════════════════════════════════
+// WEEKLY OBJECTIVES BUILDER (in skill modal)
+// ════════════════════════════════════════════════════
+let _woData={}; // {weekNum: [obj1, obj2, ...]}
+let _woActiveWeek=1;
+let _woTotalWeeks=13;
+
+function initWOBuilder(existingWO,totalWeeks){
+  _woData={};_woActiveWeek=1;_woTotalWeeks=totalWeeks||13;
+  // Pre-fill existing
+  if(existingWO){Object.entries(existingWO).forEach(([w,objs])=>{if(objs&&objs.length)_woData[parseInt(w)]=[...objs];});}
+  renderWOTabs();renderWOWeek(_woActiveWeek);
+}
+
+function renderWOTabs(){
+  const wrap=document.getElementById('woWeekTabs');if(!wrap)return;
+  wrap.innerHTML='';
+  for(let w=1;w<=_woTotalWeeks;w++){
+    const hasObjs=(_woData[w]&&_woData[w].length>0);
+    const btn=document.createElement('button');
+    btn.className='wo-tab'+(w===_woActiveWeek?' active':'');
+    btn.textContent='W'+w+(hasObjs?' ●':'');
+    btn.style.color=hasObjs?'var(--gold)':'';
+    btn.onclick=()=>{_woActiveWeek=w;renderWOTabs();renderWOWeek(w);};
+    wrap.appendChild(btn);
+  }
+}
+
+function renderWOWeek(w){
+  const builder=document.getElementById('woBuilder');if(!builder)return;
+  const objs=_woData[w]||[];
+  builder.innerHTML=`<div style="font-family:Share Tech Mono,monospace;font-size:8px;color:var(--gold);letter-spacing:2px;margin-bottom:8px">WEEK ${w} OBJECTIVES</div>
+    <div id="woObjList">${objs.map((o,i)=>`<div style="display:flex;gap:6px;margin-bottom:6px"><input class="wo-obj-input" value="${o.replace(/"/g,'&quot;')}" oninput="updateWOObj(${w},${i},this.value)" placeholder="Objective ${i+1}..."><button class="wo-rm-obj" onclick="removeWOObj(${w},${i})">✕</button></div>`).join('')}</div>
+    <button class="add-task-btn" onclick="addWOObj(${w})" style="margin-top:4px">+ ADD OBJECTIVE FOR WEEK ${w}</button>`;
+}
+
+function addWOObj(w){if(!_woData[w])_woData[w]=[];_woData[w].push('');renderWOTabs();renderWOWeek(w);}
+function removeWOObj(w,i){if(_woData[w]){_woData[w].splice(i,1);if(!_woData[w].length)delete _woData[w];}renderWOTabs();renderWOWeek(w);}
+function updateWOObj(w,i,val){if(!_woData[w])_woData[w]=[];_woData[w][i]=val;}
+
+// ════════════════════════════════════════════════════
+// AI CHATBOT (powered by Hugging Face — free, open source)
+// Uses HF Inference API with Mistral-7B-Instruct
+// ════════════════════════════════════════════════════
+let chatOpen=false;
+let chatHistory=[];
+
+// AI — powered by Anthropic API
+function toggleChat(){
+  chatOpen=!chatOpen;
+  const panel=document.getElementById('chatPanel');
+  if(chatOpen){
+    panel.classList.add('open');
+    if(chatHistory.length===0)addAIBubble("Hey! I'm Aria, your system assistant ✦ I can see all your skills, XP, and progress. What do you need?");
+    setTimeout(()=>document.getElementById('chatInp').focus(),300);
+  }else{
+    panel.classList.remove('open');
+  }
+}
+
+function addAIBubble(text){
+  const msgs=document.getElementById('chatMsgs');
+  const b=document.createElement('div');b.className='bubble ai';b.textContent=text;
+  msgs.appendChild(b);msgs.scrollTop=msgs.scrollHeight;
+}
+function addUserBubble(text){
+  const msgs=document.getElementById('chatMsgs');
+  const b=document.createElement('div');b.className='bubble usr';b.textContent=text;
+  msgs.appendChild(b);msgs.scrollTop=msgs.scrollHeight;
+}
+function addTyping(){
+  const msgs=document.getElementById('chatMsgs');
+  const b=document.createElement('div');b.className='bubble typing';b.id='typingBubble';
+  b.innerHTML='<span class="tdot"></span><span class="tdot"></span><span class="tdot"></span>';
+  msgs.appendChild(b);msgs.scrollTop=msgs.scrollHeight;
+  return b;
+}
+function removeTyping(){const t=document.getElementById('typingBubble');if(t)t.remove();}
+
+function chipSend(btn){document.getElementById('chatInp').value=btn.textContent;sendChat();}
+
+async function sendChat(){
+  const inp=document.getElementById('chatInp');
+  const msg=inp.value.trim();if(!msg)return;
+  inp.value='';
+  addUserBubble(msg);
+  const typing=addTyping();
+
+  const data=loadData();
+  const sem=data.semesters[data.currentSemester];
+  const cw=data.currentWeek||3;
+
+  let systemPrompt=`You are Aria, a friendly AI assistant in a personal skill tracking app called Skill System. Help the user with study goals, skills, XP, and progress. Be warm, concise, and direct — 2-4 sentences unless more detail is needed. The user's name is ${data.playerName||'Player'}.`;
+  if(sem&&sem.skills.length){
+    systemPrompt+=`\n\nCurrent week: ${cw}. Semester: ${sem.name}. Skills:`;
+    sem.skills.forEach(sk=>{
+      const p=pct(sk,cw);const g=getGrade(p);
+      const xp=(data.xp&&data.xp[sk.id])||0;
+      const streak=(data.streaks&&data.streaks[sk.id])||0;
+      const woMap=WO[sk.id]||{};const customWO=sk.weeklyObjectives||{};
+      const thisWeekObjs=(woMap[cw]||[]).concat(customWO[cw]||[]);
+      const doneCnt=((sk.weeklyDone||{})[cw]||[]).length;
+      systemPrompt+=`\n• ${sk.name}: ${p}% (${g.short}), XP:${xp}, streak:${streak}d, week ${cw} objectives:${doneCnt}/${thisWeekObjs.length} done`;
+    });
+    const avg=Math.round(sem.skills.reduce((s,sk)=>s+pct(sk,cw),0)/sem.skills.length);
+    systemPrompt+=`\nOverall average: ${avg}% (${getGrade(avg).short})`;
+  }
+
+  const GEMINI_KEY=(window.ARIA_KEY||'').trim()||(sessionStorage.getItem('aria_key')||'').trim()||(data.ariaKey||'').trim();
+  if(!GEMINI_KEY){
+    removeTyping();
+    addAIBubble("Aria needs a free Gemini API key. Go to Settings and paste your key from aistudio.google.com/app/apikey");
+    return;
+  }
+
+  try{
+    const pastHistory=chatHistory.slice(-10);
+    const cleanHistory=[];
+    for(const m of pastHistory){
+      const role=m.role==='assistant'?'model':'user';
+      if(cleanHistory.length>0&&cleanHistory[cleanHistory.length-1].role===role) continue;
+      cleanHistory.push({role,parts:[{text:m.content}]});
+    }
+    const msgs=[
+      {role:'user', parts:[{text:systemPrompt}]},
+      {role:'model',parts:[{text:`Understood! I'm Aria, ready to help ${data.playerName||'you'} with their skills.`}]},
+      ...cleanHistory,
+      {role:'user', parts:[{text:msg}]}
+    ];
+    const MODELS=['gemini-2.5-flash','gemini-1.5-flash','gemini-1.5-flash-latest'];
+    let json=null;
+    for(const model of MODELS){
+      const res=await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_KEY}`,
+        {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:msgs})}
+      );
+      json=await res.json();
+      if(json.error&&(json.error.status==='RESOURCE_EXHAUSTED'||json.error.status==='NOT_FOUND'||json.error.status==='INVALID_ARGUMENT')) continue;
+      break;
+    }
+    let reply='';
+    if(json&&json.candidates?.[0]?.content?.parts?.[0]?.text){
+      reply=json.candidates[0].content.parts[0].text.trim();
+    } else if(json&&json.error){
+      if(json.error.status==='RESOURCE_EXHAUSTED'){
+        reply='⚠️ API quota reached — wait a minute and try again, or get a fresh key at aistudio.google.com/app/apikey';
+      } else {
+        reply='Error: '+(json.error.message||JSON.stringify(json.error));
+      }
+    } else {
+      reply='No response received. Check your API key in Settings.';
+    }
+    removeTyping();
+    addAIBubble(reply);
+    chatHistory.push({role:'user',content:msg});
+    chatHistory.push({role:'assistant',content:reply});
+    if(chatHistory.length>20)chatHistory=chatHistory.slice(-20);
+  }catch(e){
+    removeTyping();
+    addAIBubble('Connection error: '+e.message);
+  }
+}
+
+// ════════════════════════════════════════════════════
+// START / WELCOME / RETURN FLOW
+// ════════════════════════════════════════════════════
+let welcomeTimer=null;
+
+function onStartClick(){
+  if(!window._fbUser){return;} // guard: shouldn't be reachable but just in case
+  const ss=document.getElementById('startScreen');
+  ss.classList.add('fade-out');
+  setTimeout(async()=>{
+    ss.classList.remove('show','fade-out','continue-mode');
+    await loadDataRemote(); // ensure fresh data before welcome
+    showWelcome();
+  },1200);
+}
+
+function showWelcome(){
+  const data=loadData();
+  const name=data.playerName||'PLAYER';
+  const og=getOverallGrade(data);
+  const sem=data.semesters[data.currentSemester];
+  const week=data.currentWeek||3;
+  document.getElementById('wsName').textContent=name.toUpperCase();
+  document.getElementById('wsGrade').textContent=og.gem+' '+og.short+' GRADE';
+  document.getElementById('wsGrade').style.color=og.color;
+  document.getElementById('wsGrade').style.textShadow='0 0 28px '+og.color;
+  document.getElementById('wsWeek').textContent='WEEK '+week+' · '+(sem?sem.name.toUpperCase():'SEMESTER 1 2026');
+  const ws=document.getElementById('welcomeScreen');
+  ws.style.display='flex';ws.offsetHeight;
+
+  // Cold, authoritative System voice — Solo Levelling style
+  const ng=nextGrade(og);
+  let speechText=`System initialised. Welcome back, ${name}.`;
+  if(ng){const data2=loadData();const avg=Math.round((data2.semesters[data2.currentSemester]?.skills||[]).reduce((s,sk)=>s+pct(sk,data2.currentWeek||3),0)/Math.max(1,(data2.semesters[data2.currentSemester]?.skills||[]).length));const needed=ng.min-avg;speechText+=` Current rank: ${og.short}. ${needed} percent remaining until ${ng.short}. Begin.`;}
+  else{speechText+=` Current rank: Special Grade. Maximum level achieved.`;}
+  speak(speechText,{rate:0.95});
+
+  if(welcomeTimer)clearTimeout(welcomeTimer);
+  welcomeTimer=setTimeout(()=>{
+    ws.classList.add('fade-out');
+    setTimeout(()=>{
+      ws.style.display='none';ws.classList.remove('fade-out');
+      document.getElementById('mainApp').classList.add('show');
+      document.getElementById('returnBtn').style.display='flex';
+      document.getElementById('licensePanel').classList.add('visible');
+      document.getElementById('chatBtn').classList.add('visible');
+      render();
+    },1000);
+  },5000);
+}
+
+function returnToStart(){
+  if(window.speechSynthesis)window.speechSynthesis.cancel();
+  if(_currentAudio){_currentAudio.pause();_currentAudio=null;}
+  if(welcomeTimer)clearTimeout(welcomeTimer);
+  const app=document.getElementById('mainApp'),btn=document.getElementById('returnBtn');
+  const lp=document.getElementById('licensePanel'),cb=document.getElementById('chatBtn');
+  app.style.transition='opacity 0.5s';app.style.opacity='0';
+  // close chat if open
+  document.getElementById('chatPanel').classList.remove('open');chatOpen=false;
+  setTimeout(()=>{
+    app.classList.remove('show');app.style.opacity='';app.style.transition='';
+    btn.style.display='none';lp.classList.remove('visible');cb.classList.remove('visible');
+    const ss=document.getElementById('startScreen');
+    ss.classList.add('show','continue-mode','fade-in');ss.offsetHeight;
+    setTimeout(()=>ss.classList.remove('fade-in'),800);
+  },500);
+}
+
+// ════════════════════════════════════════════════════
+// 🌸 THEME SYSTEM
+// ════════════════════════════════════════════════════
+let _sakuraPetals=[];
+let _sakuraInterval=null;
+
+function spawnSakuraPetal(){
+  const petal=document.createElement('div');
+  petal.className='sakura-petal';
+  const emojis=['🌸','🌺','✿','❀','🌷','💮'];
+  petal.textContent=emojis[Math.floor(Math.random()*emojis.length)];
+  const left=Math.random()*100;
+  const dur=6+Math.random()*8;
+  const swayDur=2+Math.random()*3;
+  const size=10+Math.random()*10;
+  petal.style.cssText=`left:${left}vw;font-size:${size}px;animation-duration:${dur}s,${swayDur}s;animation-delay:${Math.random()*2}s,0s;`;
+  document.body.appendChild(petal);
+  _sakuraPetals.push(petal);
+  // remove after animation
+  setTimeout(()=>{petal.remove();_sakuraPetals=_sakuraPetals.filter(p=>p!==petal);},( dur+2)*1000);
+}
+
+function startSakura(){
+  if(_sakuraInterval)return;
+  // spawn a few immediately
+  for(let i=0;i<5;i++) setTimeout(spawnSakuraPetal, i*400);
+  _sakuraInterval=setInterval(spawnSakuraPetal,1800);
+}
+
+function stopSakura(){
+  if(_sakuraInterval){clearInterval(_sakuraInterval);_sakuraInterval=null;}
+  _sakuraPetals.forEach(p=>p.remove());
+  _sakuraPetals=[];
+}
+
+function setTheme(theme){
+  const data=loadData();
+  data.theme=theme;
+  save(data);
+  applyTheme(theme);
+}
+
+function applyTheme(theme){
+  const body=document.body;
+  const darkBtn=document.getElementById('themeDarkBtn');
+  const femBtn=document.getElementById('themeFemBtn');
+
+  if(theme==='feminine'){
+    body.classList.add('theme-feminine');
+    startSakura();
+    // Swap screen labels to cute text
+    document.querySelectorAll('.ls-eyebrow,.ss-eyebrow,.ws-sys,.ne-eyebrow,.system-label').forEach(el=>{
+      if(!el.dataset.origText) el.dataset.origText=el.textContent;
+      el.textContent='✿ bloom system ✿';
+    });
+    document.querySelectorAll('.ls-title,.ss-title').forEach(el=>{
+      if(!el.dataset.origHtml) el.dataset.origHtml=el.innerHTML;
+      el.innerHTML='skill<br><span>bloom</span>✨';
+    });
+    document.querySelectorAll('.ss-prompt').forEach(el=>{
+      if(!el.dataset.origText) el.dataset.origText=el.textContent;
+      el.textContent='🌸 tap to begin~';
+    });
+    document.querySelectorAll('.ss-prompt-continue').forEach(el=>{
+      if(!el.dataset.origText) el.dataset.origText=el.textContent;
+      el.textContent='🌸 continue~';
+    });
+    document.querySelectorAll('.ws-enter').forEach(el=>{
+      if(!el.dataset.origText) el.dataset.origText=el.textContent;
+      el.textContent='🌷 entering bloom…';
+    });
+    const h1=document.querySelector('.header h1');
+    if(h1){if(!h1.dataset.origHtml)h1.dataset.origHtml=h1.innerHTML;h1.innerHTML='skill <span>bloom</span> ✨';}
+    document.querySelectorAll('.ls-signin-label').forEach(el=>{
+      if(!el.dataset.origText)el.dataset.origText=el.textContent;
+      el.textContent='sign in to enter your bloom diary~';
+    });
+    // Cute grade chip labels
+    const gradeChips=document.querySelectorAll('.grade-chip');
+    const cuteGrades=[
+      '🌱 seedling · 0–39%','🌸 blossoming · 40–59%','🌺 flourishing · 60–74%',
+      '🌟 radiant · 75–89%','💎 legendary · 90–100%'
+    ];
+    gradeChips.forEach((el,i)=>{if(!el.dataset.origText)el.dataset.origText=el.textContent;if(cuteGrades[i])el.textContent=cuteGrades[i];});
+    // switch music to lo-fi
+    if(window.musicStarted){
+      window.stopMusic();
+      setTimeout(()=>window.startLofi(),500);
+    }
+    if(darkBtn){darkBtn.style.borderColor='rgba(100,100,140,0.3)';darkBtn.style.opacity='0.5';darkBtn.style.boxShadow='none';}
+    if(femBtn){femBtn.style.borderColor='#e87ee8';femBtn.style.boxShadow='0 0 20px rgba(220,100,255,0.35)';femBtn.style.opacity='1';}
+    // update particle colours
+    if(window._particleTheme)window._particleTheme('feminine');
+  } else {
+    body.classList.remove('theme-feminine');
+    stopSakura();
+    // Restore original text
+    document.querySelectorAll('[data-orig-text]').forEach(el=>{el.textContent=el.dataset.origText;});
+    document.querySelectorAll('[data-orig-html]').forEach(el=>{el.innerHTML=el.dataset.origHtml;});
+    // switch music back to dark OST
+    if(window.musicStarted || window._lofiStarted){
+      window.stopLofi&&window.stopLofi();
+      window.stopMusic&&window.stopMusic();
+      setTimeout(()=>window.startMusic&&window.startMusic(),500);
+    }
+    if(darkBtn){darkBtn.style.borderColor='var(--border-glow)';darkBtn.style.boxShadow='0 0 20px rgba(10,132,255,0.25)';darkBtn.style.opacity='1';}
+    if(femBtn){femBtn.style.borderColor='rgba(220,100,255,0.3)';femBtn.style.boxShadow='none';femBtn.style.opacity='0.7';}
+    if(window._particleTheme)window._particleTheme('dark');
+  }
+}
+
+// Hook into render to restore theme from saved data
+const _origRender2=window.render;
+window.render=function(){
+  if(_origRender2)_origRender2.apply(this,arguments);
+  const data=loadData();
+  if(data.theme)applyTheme(data.theme);
+  // also restore aria key display
+  const ariaInp=document.getElementById('ariaKeyInput');
+  if(ariaInp&&data.ariaKey)ariaInp.value=data.ariaKey;
+};
+
+// Apply theme on page load (before login)
+document.addEventListener('DOMContentLoaded',()=>{
+  const data=loadData();
+  if(data&&data.theme)applyTheme(data.theme);
+});
+</script>
+<script>
+// ════════════════════════════════════════════════════
+// AUDIO ENGINE — Solo Levelling style UI sounds
+// ════════════════════════════════════════════════════
+const AC = new (window.AudioContext || window.webkitAudioContext)();
+
+function playTone(freq, type, dur, vol=0.18, fadeOut=true){
+  if(AC.state==='suspended') AC.resume();
+  const o = AC.createOscillator();
+  const g = AC.createGain();
+  o.connect(g); g.connect(AC.destination);
+  o.type = type; o.frequency.setValueAtTime(freq, AC.currentTime);
+  g.gain.setValueAtTime(vol, AC.currentTime);
+  if(fadeOut) g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + dur);
+  o.start(); o.stop(AC.currentTime + dur);
+}
+
+function playNoise(dur, vol=0.06){
+  if(AC.state==='suspended') AC.resume();
+  const buf = AC.createBuffer(1, AC.sampleRate*dur, AC.sampleRate);
+  const d = buf.getChannelData(0);
+  for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1);
+  const src = AC.createBufferSource();
+  const g = AC.createGain();
+  const f = AC.createBiquadFilter();
+  f.type='bandpass'; f.frequency.value=800; f.Q.value=0.5;
+  src.buffer=buf; src.connect(f); f.connect(g); g.connect(AC.destination);
+  g.gain.setValueAtTime(vol, AC.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime+dur);
+  src.start(); src.stop(AC.currentTime+dur);
+}
+
+// Hover — soft PlayStation-style double chime (D6 → A6), ultra-quiet
+function sndHover(){
+  // Gentle D6 chime — very soft, fast decay
+  playTone(1175,'sine',0.055,0.032,true);
+  // Micro A6 shimmer 28ms later, even quieter
+  setTimeout(()=>playTone(1760,'sine',0.032,0.022,true),28);
+}
+
+// Click — punchy confirm
+function sndClick(){
+  playTone(900,'square',0.04,0.12);
+  playTone(1400,'sine',0.08,0.08);
+  playNoise(0.05,0.05);
+}
+
+// Checkbox tick — reward ping
+function sndTick(){
+  playTone(880,'sine',0.06,0.1);
+  setTimeout(()=>playTone(1320,'sine',0.1,0.09),60);
+  setTimeout(()=>playTone(1760,'sine',0.12,0.14),120);
+}
+
+// Rank up — dramatic ascending chord
+function sndRankUp(){
+  [440,550,660,880].forEach((f,i)=>setTimeout(()=>playTone(f,'sine',0.4,0.15),i*80));
+  setTimeout(()=>{playTone(1760,'sine',0.6,0.2);playNoise(0.3,0.08);},400);
+}
+
+// Weekly all complete — celebratory shimmer
+function sndWeeklyComplete(){
+  [523,659,784,1047].forEach((f,i)=>setTimeout(()=>playTone(f,'sine',0.18,0.14),i*60));
+  setTimeout(()=>{playTone(1047,'sine',0.25,0.18,true);playNoise(0.15,0.06);},280);
+  setTimeout(()=>playTone(1319,'sine',0.12,0.3,true),400);
+}
+
+// Open panel / modal
+function sndOpen(){
+  playTone(600,'sine',0.05,0.1);
+  setTimeout(()=>playTone(900,'sine',0.08,0.1),50);
+  playNoise(0.06,0.04);
+}
+
+// Close panel
+function sndClose(){
+  playTone(900,'sine',0.04,0.08);
+  setTimeout(()=>playTone(600,'sine',0.06,0.1),40);
+}
+
+// ── Attach sounds to interactive elements ──────────
+function attachSounds(){
+  // Hover sound on all buttons, nav, cards, interactive items
+  document.querySelectorAll('button, .nav-btn, .wobj-item, .task-item, .chip, .ls-google-btn, .return-btn, .new-sem-btn, .del-sem-btn, .week-select, .semester-select').forEach(el=>{
+    if(!el.dataset.snd){
+      el.dataset.snd='1';
+      el.addEventListener('mouseenter', sndHover);
+      el.addEventListener('click', ()=>{
+        // distinguish tick items from regular clicks
+        if(el.classList.contains('wobj-item')||el.classList.contains('task-item')) sndTick();
+        else sndClick();
+      }, {capture:true});
+    }
+  });
+}
+
+// Re-attach after renders (since innerHTML replaces elements)
+const _origRenderSkills = window.renderSkills;
+function hookSoundsAfterRender(){
+  setTimeout(attachSounds, 80);
+}
+
+// Observe DOM changes to re-attach sounds when cards re-render
+const _mo = new MutationObserver(()=>hookSoundsAfterRender());
+_mo.observe(document.body, {childList:true, subtree:true});
+
+// Initial attach
+document.addEventListener('DOMContentLoaded', ()=>setTimeout(attachSounds,300));
+
+// ── Patch modal/panel open/close for sounds ────────
+const _origToggleChat = window.toggleChat;
+window.toggleChatOrig = window.toggleChat;
+
+// Override showRankUp to play rank-up sound
+const _origShowRankUp = window.showRankUp;
+window.showRankUp = function(label, skillName){
+  sndRankUp();
+  if(_origShowRankUp) _origShowRankUp(label, skillName);
+};
+
+// ── SYSTEM VOICE — ElevenLabs (Cold & Authoritative Female, Solo Levelling style) ──
+// Voice: Rachel — cold, precise, authoritative female narrator
+const EL_API_KEY  = 'sk_cfed47e858614300866abb8503797cf8c5a83924d80624a8';
+const EL_VOICE_ID = '21m00Tcm4TlvDq8ikWAM'; // Rachel — cold, precise, female
+
+let _currentAudio = null;
+
+async function speak(text, opts={}) {
+  // Cancel any currently playing audio
+  if (_currentAudio) { _currentAudio.pause(); _currentAudio = null; }
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+
+  try {
+    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${EL_VOICE_ID}`, {
+      method: 'POST',
+      headers: {
+        'xi-api-key': EL_API_KEY,
+        'Content-Type': 'application/json',
+        'Accept': 'audio/mpeg'
+      },
+      body: JSON.stringify({
+        text: text,
+        model_id: 'eleven_multilingual_v2',
+        voice_settings: {
+          stability: 0.85,          // very stable = cold, controlled
+          similarity_boost: 0.75,
+          style: 0.12,              // low style = robotic, flat delivery
+          use_speaker_boost: true
+        }
+      })
+    });
+
+    if (!res.ok) throw new Error('ElevenLabs error: ' + res.status);
+
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    _currentAudio = new Audio(url);
+    _currentAudio.volume = opts.volume || 1.0;
+    _currentAudio.playbackRate = opts.rate || 0.95; // slightly slower for effect
+    _currentAudio.play();
+    _currentAudio.onended = () => { URL.revokeObjectURL(url); _currentAudio = null; };
+
+  } catch(e) {
+    // Fallback to browser TTS if ElevenLabs fails
+    console.warn('ElevenLabs TTS failed, falling back to browser voice:', e);
+    if (!window.speechSynthesis) return;
+    const u = new SpeechSynthesisUtterance(text);
+    const voices = window.speechSynthesis.getVoices();
+    const v = voices.find(v=>/samantha|karen|victoria|zira|female/i.test(v.name) && /en/i.test(v.lang))
+           || voices.find(v=>/en/i.test(v.lang));
+    if (v) u.voice = v;
+    u.rate = 0.88; u.pitch = 1.1; u.volume = 1.0;
+    window.speechSynthesis.speak(u);
+  }
+}
+</script>
+<script>
+// ════════════════════════════════════════════════════
+// SOLO LEVELLING OST ENGINE — Procedural dark orchestral + electronic
+// Layers: sub bass drone | bass pulse | string pad | choir shimmer |
+//         piano motif | electronic arps | percussive impacts
 // ════════════════════════════════════════════════════
 (function(){
 
+const AC2 = new (window.AudioContext || window.webkitAudioContext)();
+let musicStarted = false;
+let masterGain, reverbGain, reverbNode;
+
+// ── Reverb (convolver with synthesised impulse) ──────
+function makeReverb(dur=3.5, decay=2.2){
+  const len = AC2.sampleRate * dur;
+  const buf = AC2.createBuffer(2, len, AC2.sampleRate);
+  for(let c=0;c<2;c++){
+    const d=buf.getChannelData(c);
+    for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len, decay);
+  }
+  const conv = AC2.createConvolver();
+  conv.buffer = buf;
+  return conv;
+}
+
+// ── Master chain ─────────────────────────────────────
+function initMaster(){
+  masterGain = AC2.createGain();
+  masterGain.gain.setValueAtTime(0, AC2.currentTime);
+
+  reverbNode = makeReverb(4, 2.5);
+  reverbGain = AC2.createGain();
+  reverbGain.gain.value = 0.35;
+
+  // Subtle low-pass warmth
+  const lp = AC2.createBiquadFilter();
+  lp.type = 'lowpass'; lp.frequency.value = 8000;
+
+  masterGain.connect(lp);
+  lp.connect(AC2.destination);
+  masterGain.connect(reverbNode);
+  reverbNode.connect(reverbGain);
+  reverbGain.connect(AC2.destination);
+}
+
+// ── Helpers ───────────────────────────────────────────
+function osc(freq, type, gainVal, startT, dur, fadeIn=0.1, fadeOut=0.4){
+  const o = AC2.createOscillator();
+  const g = AC2.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(0, startT);
+  g.gain.linearRampToValueAtTime(gainVal, startT + fadeIn);
+  g.gain.setValueAtTime(gainVal, startT + dur - fadeOut);
+  g.gain.linearRampToValueAtTime(0, startT + dur);
+  o.connect(g); g.connect(masterGain);
+  o.start(startT); o.stop(startT + dur + 0.05);
+}
+
+function noise(gainVal, startT, dur, filterFreq=200, Q=0.8){
+  const len = AC2.sampleRate * (dur + 0.1);
+  const buf = AC2.createBuffer(1, len, AC2.sampleRate);
+  const d = buf.getChannelData(0);
+  for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1);
+  const src = AC2.createBufferSource();
+  const f   = AC2.createBiquadFilter();
+  const g   = AC2.createGain();
+  f.type='bandpass'; f.frequency.value=filterFreq; f.Q.value=Q;
+  src.buffer=buf;
+  g.gain.setValueAtTime(0, startT);
+  g.gain.linearRampToValueAtTime(gainVal, startT+0.05);
+  g.gain.setValueAtTime(gainVal, startT+dur-0.3);
+  g.gain.linearRampToValueAtTime(0, startT+dur);
+  src.connect(f); f.connect(g); g.connect(masterGain);
+  src.start(startT); src.stop(startT+dur+0.1);
+}
+
+// ── Musical constants (D minor / Phrygian — dark, ominous) ──
+// D2=73.4, A2=110, F2=87.3, C2=65.4, Bb1=58.3, E2=82.4
+const ROOT = 73.416; // D2
+
+// ── LAYER 1: Sub bass drone (deep, continuous) ────────
+function subDrone(startT, dur){
+  osc(ROOT*0.5, 'sine', 0.28, startT, dur, 1.5, 2.0);       // sub octave
+  osc(ROOT,     'sine', 0.18, startT, dur, 1.5, 2.0);        // root
+  osc(ROOT*1.5, 'sine', 0.06, startT, dur, 2.0, 2.0);        // fifth harmonic
+}
+
+// ── LAYER 2: Bass pulse (rhythmic, every 2 beats at 72bpm) ──
+function bassPulse(startT, count){
+  const bpm=72, beat=60/bpm;
+  const pattern=[ROOT, ROOT*0.75, ROOT*0.89, ROOT]; // D, Bb, C, D
+  for(let i=0;i<count;i++){
+    const t = startT + i * beat * 2;
+    const freq = pattern[i % pattern.length];
+    osc(freq,      'sawtooth', 0.12, t, beat*1.6, 0.01, 0.3);
+    osc(freq*2,    'sine',     0.06, t, beat*1.2, 0.01, 0.2);
+    noise(0.04, t, 0.08, 100, 1.2); // attack transient
+  }
+}
+
+// ── LAYER 3: String pad (slow, bowed feel) ───────────
+function stringPad(startT, dur, chord){
+  chord.forEach((freq, i) => {
+    const detune = (Math.random()-0.5)*4;
+    osc(freq*(1+detune/1000),   'sawtooth', 0.055, startT, dur, 1.8, 2.5);
+    osc(freq*(1-detune/1000)*2, 'sawtooth', 0.03,  startT, dur, 2.2, 2.5);
+    // Slight vibrato using a second osc freq-modulated manually
+    osc(freq*1.001, 'sawtooth', 0.02, startT+1, dur-1, 1.0, 2.0);
+  });
+}
+
+// ── LAYER 4: Choir shimmer ────────────────────────────
+function choirShimmer(startT, dur, baseFreq){
+  // Filtered noise + sine blend = ethereal choir
+  noise(0.06, startT, dur, baseFreq*4, 3.5);
+  noise(0.04, startT+0.3, dur-0.3, baseFreq*6, 4.0);
+  osc(baseFreq*2,   'sine', 0.04, startT, dur, 3.0, 3.0);
+  osc(baseFreq*3,   'sine', 0.025, startT+0.5, dur-0.5, 3.0, 3.0);
+  osc(baseFreq*2.5, 'sine', 0.02, startT+1, dur-1, 3.0, 3.0);
+}
+
+// ── LAYER 5: Piano motif (sparse, haunting) ──────────
+// D minor motif: D4, F4, A4, C5, Bb4 — Solo Levelling feel
+function pianoMotif(startT){
+  const bpm=72, beat=60/bpm;
+  const notes=[
+    {f:ROOT*8,    t:0,         dur:beat*2.5},
+    {f:ROOT*8*1.189, t:beat*3, dur:beat*1.5},  // F4
+    {f:ROOT*8*1.498, t:beat*5, dur:beat*2},    // A4
+    {f:ROOT*8*1.781, t:beat*8, dur:beat*3},    // C5
+    {f:ROOT*8*1.587, t:beat*12,dur:beat*4},    // Bb4
+  ];
+  notes.forEach(n=>{
+    const t = startT + n.t;
+    // Piano-like: sine + triangle blend, fast attack, medium decay
+    osc(n.f,   'sine',     0.09, t, n.dur, 0.005, n.dur*0.7);
+    osc(n.f*2, 'triangle', 0.03, t, n.dur*0.5, 0.005, n.dur*0.4);
+    osc(n.f,   'triangle', 0.04, t+0.008, n.dur*0.8, 0.01, n.dur*0.6);
+  });
+}
+
+// ── LAYER 6: Electronic arpeggios (subtle, high) ─────
+function electroArp(startT, count){
+  const bpm=72, beat=60/bpm, sixteenth=beat/4;
+  const arpNotes=[ROOT*16, ROOT*16*1.189, ROOT*16*1.498, ROOT*16*1.781,
+                  ROOT*16*2, ROOT*16*1.781, ROOT*16*1.498, ROOT*16*1.189];
+  for(let i=0;i<count;i++){
+    const t = startT + i*sixteenth;
+    const freq = arpNotes[i % arpNotes.length];
+    osc(freq, 'sine', 0.025, t, sixteenth*1.2, 0.005, sixteenth*0.8);
+  }
+}
+
+// ── LAYER 7: Percussive impacts (cinematic hits) ──────
+function cinematicHit(startT){
+  // Low boom
+  osc(55, 'sine', 0.3, startT, 1.2, 0.002, 1.0);
+  osc(40, 'sine', 0.2, startT, 1.5, 0.002, 1.3);
+  // White noise burst
+  noise(0.15, startT, 0.4, 500, 0.5);
+  noise(0.08, startT, 0.6, 150, 0.8);
+  // High shimmer tail
+  osc(ROOT*16, 'sine', 0.04, startT+0.1, 2.0, 0.05, 1.5);
+}
+
+// ── COMPOSE: Full continuous score ───────────────────
+function composeScore(){
+  const now = AC2.currentTime + 0.1;
+  const bpm = 72, beat = 60/bpm;
+  const bar = beat * 4; // 4/4 time
+
+  // === INTRO (0–8s): Sub drone builds, first hit ===
+  subDrone(now, 32);
+  cinematicHit(now + 0.5);
+  choirShimmer(now + 1.0, 8, ROOT*2);
+
+  // === VERSE 1 (8–24s): Bass pulse enters, strings ===
+  stringPad(now + 8, 16, [ROOT*2, ROOT*2*1.189, ROOT*2*1.498]);
+  bassPulse(now + 8, 16);
+  pianoMotif(now + 10);
+
+  // === BUILD (24–32s): Arps enter, tension rises ===
+  electroArp(now + 24, 32);
+  stringPad(now + 24, 8, [ROOT*2*0.891, ROOT*2*1.189, ROOT*2*1.498, ROOT*2*1.781]);
+  choirShimmer(now + 26, 6, ROOT*3);
+
+  // === HIT + DROP (32s): Cinematic impact ===
+  cinematicHit(now + 32);
+
+  // === VERSE 2 (32–56s): Full arrangement ===
+  subDrone(now + 32, 28);
+  stringPad(now + 34, 22, [ROOT*2, ROOT*2*1.335, ROOT*2*1.498]);
+  bassPulse(now + 34, 22);
+  pianoMotif(now + 38);
+  electroArp(now + 42, 32);
+  choirShimmer(now + 44, 10, ROOT*2);
+
+  // === OUTRO BUILD (56–64s): Everything together ===
+  cinematicHit(now + 56);
+  stringPad(now + 56, 10, [ROOT*2, ROOT*2*1.189, ROOT*2*1.498, ROOT*2*1.781]);
+  bassPulse(now + 56, 8);
+  electroArp(now + 58, 24);
+  choirShimmer(now + 58, 8, ROOT*4);
+
+  // Loop — schedule next cycle at 64s
+  setTimeout(()=>{ if(musicStarted) composeScore(); }, 62000);
+}
+
+// ── Fade master in/out ────────────────────────────────
+function musicFadeIn(dur=3){
+  masterGain.gain.cancelScheduledValues(AC2.currentTime);
+  masterGain.gain.setValueAtTime(masterGain.gain.value, AC2.currentTime);
+  masterGain.gain.linearRampToValueAtTime(0.25, AC2.currentTime + dur);
+}
+function musicFadeOut(dur=2){
+  masterGain.gain.cancelScheduledValues(AC2.currentTime);
+  masterGain.gain.setValueAtTime(masterGain.gain.value, AC2.currentTime);
+  masterGain.gain.linearRampToValueAtTime(0, AC2.currentTime + dur);
+}
+
+// ── Public API ────────────────────────────────────────
+window.startMusic = function(){
+  if(musicStarted) return;
+  if(AC2.state==='suspended') AC2.resume();
+  musicStarted = true;
+  initMaster();
+  composeScore();
+  musicFadeIn(4);
+};
+window.stopMusic = function(){
+  musicFadeOut(2);
+  setTimeout(()=>{ musicStarted=false; }, 2500);
+};
+window.setMusicVolume = function(v){
+  if(!masterGain) return;
+  masterGain.gain.setTargetAtTime(v, AC2.currentTime, 0.5);
+};
+
+// ── Music control button (mute toggle) ────────────────
+document.addEventListener('DOMContentLoaded', ()=>{
+  // Add mute button to UI
+  const btn = document.createElement('button');
+  btn.id = 'musicBtn';
+  btn.innerHTML = '♫';
+  btn.title = 'Toggle music';
+  btn.style.cssText = `
+    position:fixed;bottom:28px;left:92px;z-index:50;
+    background:rgba(2,4,8,0.92);border:1px solid #1a4a8a;
+    color:#4a6580;font-size:14px;width:40px;height:40px;
+    cursor:pointer;transition:all 0.25s;backdrop-filter:blur(6px);
+    display:none;align-items:center;justify-content:center;
+  `;
+  let muted = false;
+  btn.addEventListener('click', ()=>{
+    muted = !muted;
+    if(muted){
+      window.setMusicVolume(0);
+      window.setLofiVolume&&window.setLofiVolume(0);
+      btn.style.color='#ff3355'; btn.style.borderColor='#ff3355';
+    } else {
+      window.setMusicVolume(0.25);
+      window.setLofiVolume&&window.setLofiVolume(0.3);
+      const isFem=document.body.classList.contains('theme-feminine');
+      btn.style.color=isFem?'#ff9ec8':'#00e5ff';
+      btn.style.borderColor='#1a4a8a';
+    }
+  });
+  document.body.appendChild(btn);
+  window._musicBtn = btn;
+});
+
+// ── Hook into app flow ────────────────────────────────
+// Start music on first user interaction (browser autoplay policy)
+const _origOnStartClick = window.onStartClick;
+window.onStartClick = function(){
+  const data=typeof loadData==='function'?loadData():{};
+  if(data&&data.theme==='feminine'){
+    window.startLofi&&window.startLofi();
+  } else {
+    window.startMusic();
+  }
+  if(_musicBtn) { _musicBtn.style.display='flex'; _musicBtn.style.color='#00e5ff'; }
+  if(_origOnStartClick) _origOnStartClick();
+};
+
+})();
+</script>
+
+<script>
+// ════════════════════════════════════════════════════
+// 🌸 LO-FI MUSIC ENGINE — Cosy Bedroom Beats
+// Layers: warm bass | mellow chords | vinyl crackle |
+//         soft piano | gentle hi-hats | dreamy pads
+// ════════════════════════════════════════════════════
+(function(){
+
+const LF = new (window.AudioContext || window.webkitAudioContext)();
+let lofiStarted = false;
+let lofiMaster, lofiReverb, lofiReverbGain;
+window._lofiStarted = false;
+
+// ── Vinyl crackle (warm noise) ─────────────────────
+function makeVinylCrackle(startT, dur){
+  const len = LF.sampleRate * dur;
+  const buf = LF.createBuffer(1, len, LF.sampleRate);
+  const d = buf.getChannelData(0);
+  // sparse crackle: mostly silence with occasional pops
+  for(let i=0;i<d.length;i++){
+    d[i] = Math.random() < 0.002 ? (Math.random()-0.5)*0.6 : (Math.random()-0.5)*0.015;
+  }
+  const src = LF.createBufferSource();
+  const g   = LF.createGain();
+  const lp  = LF.createBiquadFilter();
+  lp.type='lowpass'; lp.frequency.value=3500;
+  src.buffer=buf;
+  g.gain.setValueAtTime(0.08, startT);
+  src.connect(lp); lp.connect(g); g.connect(lofiMaster);
+  src.start(startT); src.stop(startT+dur);
+}
+
+// ── Warm low-pass reverb ───────────────────────────
+function makeLofiReverb(){
+  const dur=2.5, len=LF.sampleRate*dur;
+  const buf=LF.createBuffer(2,len,LF.sampleRate);
+  for(let c=0;c<2;c++){
+    const d=buf.getChannelData(c);
+    for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.8);
+  }
+  const conv=LF.createConvolver(); conv.buffer=buf; return conv;
+}
+
+// ── Master chain ──────────────────────────────────
+function initLofiMaster(){
+  lofiMaster=LF.createGain();
+  lofiMaster.gain.setValueAtTime(0, LF.currentTime);
+
+  // Warm low-pass for lo-fi character
+  const lp=LF.createBiquadFilter();
+  lp.type='lowpass'; lp.frequency.value=5500; lp.Q.value=0.5;
+
+  // Gentle tape-saturation via waveshaper
+  const ws=LF.createWaveShaper();
+  const curve=new Float32Array(256);
+  for(let i=0;i<256;i++){const x=i*2/255-1;curve[i]=Math.tanh(1.5*x)/Math.tanh(1.5);}
+  ws.curve=curve;
+
+  lofiReverb=makeLofiReverb();
+  lofiReverbGain=LF.createGain(); lofiReverbGain.gain.value=0.28;
+
+  lofiMaster.connect(ws); ws.connect(lp); lp.connect(LF.destination);
+  lofiMaster.connect(lofiReverb); lofiReverb.connect(lofiReverbGain);
+  lofiReverbGain.connect(LF.destination);
+}
+
+// ── Note helpers ──────────────────────────────────
+function lfOsc(freq,type,vol,startT,dur,attack=0.05,release=0.15){
+  const o=LF.createOscillator(), g=LF.createGain();
+  o.type=type; o.frequency.value=freq;
+  g.gain.setValueAtTime(0,startT);
+  g.gain.linearRampToValueAtTime(vol,startT+attack);
+  g.gain.setValueAtTime(vol,startT+dur-release);
+  g.gain.linearRampToValueAtTime(0,startT+dur);
+  o.connect(g); g.connect(lofiMaster);
+  o.start(startT); o.stop(startT+dur+0.05);
+}
+
+// ── Musical tuning — F major (warm, cosy) ─────────
+// F3=174.6, C3=130.8, A3=220, G3=196, Bb3=233.1, Eb3=155.6, D3=146.8
+const BPM = 76;
+const B   = 60/BPM;       // 1 beat
+const BAR = B*4;           // 1 bar
+
+// F major scale notes (C3 root = 130.8)
+const NOTES = {
+  C3:130.8, D3:146.8, Eb3:155.6, F3:174.6, G3:196.0,
+  A3:220.0, Bb3:233.1, C4:261.6, D4:293.7, Eb4:311.1,
+  F4:349.2, G4:392.0, A4:440.0, Bb4:466.2, C5:523.3,
+};
+
+// ── LAYER 1: Warm bass (finger-pluck feel) ─────────
+function lofiBaseline(startT, bars){
+  // F - C - Bb - F progression
+  const prog=[
+    [NOTES.F3, NOTES.C3, NOTES.Bb3, NOTES.F3],
+    [NOTES.F3, NOTES.C3, NOTES.G3,  NOTES.F3],
+  ];
+  for(let bar=0;bar<bars;bar++){
+    const chord=prog[bar%prog.length];
+    for(let beat=0;beat<4;beat++){
+      const t=startT+bar*BAR+beat*B;
+      const note=chord[beat];
+      // Pluck: sine + triangle, short decay
+      lfOsc(note,   'sine',     0.18, t, B*0.55, 0.01, 0.25);
+      lfOsc(note*2, 'triangle', 0.06, t, B*0.3,  0.01, 0.15);
+    }
+  }
+}
+
+// ── LAYER 2: Mellow jazz chords (Rhodes-ish) ──────
+function lofiChords(startT, bars){
+  // ii-V-I-IV in F: Gm7, C7, Fmaj7, Bbmaj7
+  const chords=[
+    [NOTES.G3,NOTES.Bb3,NOTES.D4,NOTES.F4],   // Gm7
+    [NOTES.C3,NOTES.E3||NOTES.Eb3,NOTES.G3,NOTES.Bb3], // C7
+    [NOTES.F3,NOTES.A3,NOTES.C4,NOTES.E4||NOTES.Eb4],  // Fmaj7
+    [NOTES.Bb3,NOTES.D4,NOTES.F4,NOTES.A4],   // Bbmaj7
+  ];
+  for(let bar=0;bar<bars;bar++){
+    const chord=chords[bar%chords.length];
+    const t=startT+bar*BAR;
+    // Strum-like: notes slightly staggered
+    chord.forEach((freq,i)=>{
+      lfOsc(freq,'sine',0.045,t+i*0.018,BAR*0.85,0.06,0.4);
+      lfOsc(freq,'triangle',0.025,t+i*0.018,BAR*0.7,0.06,0.4);
+    });
+    // Syncopated stab on beat 2.5
+    if(bar%2===0){
+      chord.forEach((freq,i)=>{
+        lfOsc(freq,'sine',0.03,t+B*1.5+i*0.012,B*0.4,0.02,0.2);
+      });
+    }
+  }
+}
+
+// ── LAYER 3: Soft piano melody ────────────────────
+function lofiMelody(startT){
+  // Gentle pentatonic melody over 4 bars
+  const melody=[
+    {n:NOTES.C5, t:0,    d:B*1.2},
+    {n:NOTES.A4, t:B*1.5,d:B*0.8},
+    {n:NOTES.Bb4,t:B*2.5,d:B*1.0},
+    {n:NOTES.G4, t:B*4,  d:B*0.9},
+    {n:NOTES.F4, t:B*5,  d:B*1.5},
+    {n:NOTES.A4, t:B*7,  d:B*0.7},
+    {n:NOTES.C5, t:B*8,  d:B*1.0},
+    {n:NOTES.Bb4,t:B*9.5,d:B*0.8},
+    {n:NOTES.G4, t:B*11, d:B*1.2},
+    {n:NOTES.F4, t:B*13, d:B*2.0},
+  ];
+  melody.forEach(({n,t,d})=>{
+    lfOsc(n,   'sine',     0.07, startT+t, d, 0.02, d*0.5);
+    lfOsc(n*2, 'triangle', 0.02, startT+t, d*0.6, 0.02, d*0.4);
+  });
+}
+
+// ── LAYER 4: Soft hi-hats ─────────────────────────
+function lofiHiHats(startT, bars){
+  for(let bar=0;bar<bars;bar++){
+    for(let eighth=0;eighth<8;eighth++){
+      // swing: odd 8ths slightly late
+      const swing = (eighth%2===1) ? B*0.055 : 0;
+      const t=startT+bar*BAR+eighth*(B/2)+swing;
+      const vol=eighth%2===0 ? 0.028 : 0.016; // accent on downbeats
+      // Filtered white noise burst
+      const len=LF.sampleRate*0.04;
+      const buf=LF.createBuffer(1,len,LF.sampleRate);
+      const d=buf.getChannelData(0);
+      for(let i=0;i<len;i++) d[i]=(Math.random()*2-1);
+      const src=LF.createBufferSource();
+      const hp=LF.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=7000;
+      const g=LF.createGain();
+      g.gain.setValueAtTime(vol,t);
+      g.gain.exponentialRampToValueAtTime(0.001,t+0.04);
+      src.buffer=buf; src.connect(hp); hp.connect(g); g.connect(lofiMaster);
+      src.start(t); src.stop(t+0.05);
+    }
+  }
+}
+
+// ── LAYER 5: Soft kick/snap ───────────────────────
+function lofiKick(startT, bars){
+  for(let bar=0;bar<bars;bar++){
+    // Kick: beats 1 & 3
+    [0, B*2].forEach(offset=>{
+      const t=startT+bar*BAR+offset;
+      lfOsc(80,  'sine', 0.32, t, B*0.3, 0.003, 0.25);
+      lfOsc(120, 'sine', 0.15, t, B*0.15,0.002, 0.12);
+    });
+    // Snap: beats 2 & 4 (rimshot feel)
+    [B, B*3].forEach(offset=>{
+      const t=startT+bar*BAR+offset;
+      lfOsc(200, 'sine',  0.08, t, B*0.05, 0.002, 0.04);
+      lfOsc(800, 'sine',  0.04, t, B*0.03, 0.002, 0.025);
+      // thin noise crack
+      const len=LF.sampleRate*0.06;
+      const buf=LF.createBuffer(1,len,LF.sampleRate);
+      const d=buf.getChannelData(0);
+      for(let i=0;i<len;i++) d[i]=(Math.random()*2-1);
+      const src=LF.createBufferSource();
+      const bp=LF.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=1800; bp.Q.value=1.2;
+      const g=LF.createGain();
+      g.gain.setValueAtTime(0.09,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.06);
+      src.buffer=buf; src.connect(bp); bp.connect(g); g.connect(lofiMaster);
+      src.start(t); src.stop(t+0.07);
+    });
+  }
+}
+
+// ── LAYER 6: Dreamy pad ───────────────────────────
+function lofiPad(startT, dur){
+  const padNotes=[NOTES.F3, NOTES.A3, NOTES.C4, NOTES.Eb4];
+  padNotes.forEach(freq=>{
+    lfOsc(freq,     'sine',     0.025, startT, dur, 3.0, 4.0);
+    lfOsc(freq*2,   'sine',     0.015, startT+0.5, dur-0.5, 3.0, 4.0);
+    lfOsc(freq*0.5, 'triangle', 0.018, startT+1, dur-1, 3.0, 4.0);
+  });
+}
+
+// ── COMPOSE: Full lo-fi loop ──────────────────────
+function composeLofi(){
+  if(!lofiStarted) return;
+  const now = LF.currentTime + 0.1;
+  const TOTAL_BARS = 8;
+  const TOTAL_DUR  = TOTAL_BARS * BAR;
+
+  // All layers over 8 bars
+  makeVinylCrackle(now, TOTAL_DUR + 2);
+  lofiPad(now, TOTAL_DUR);
+  lofiBaseline(now, TOTAL_BARS);
+  lofiChords(now, TOTAL_BARS);
+  lofiHiHats(now, TOTAL_BARS);
+  lofiKick(now, TOTAL_BARS);
+  // Melody enters at bar 2
+  lofiMelody(now + BAR);
+  // Second melody variation at bar 6
+  lofiMelody(now + BAR * 5);
+
+  // Loop
+  setTimeout(()=>{ if(lofiStarted) composeLofi(); }, (TOTAL_DUR - 0.3) * 1000);
+}
+
+// ── Fade helpers ──────────────────────────────────
+function lofiFadeIn(dur=3){
+  lofiMaster.gain.cancelScheduledValues(LF.currentTime);
+  lofiMaster.gain.setValueAtTime(lofiMaster.gain.value, LF.currentTime);
+  lofiMaster.gain.linearRampToValueAtTime(0.3, LF.currentTime+dur);
+}
+function lofiFadeOut(dur=2){
+  lofiMaster.gain.cancelScheduledValues(LF.currentTime);
+  lofiMaster.gain.setValueAtTime(lofiMaster.gain.value, LF.currentTime);
+  lofiMaster.gain.linearRampToValueAtTime(0, LF.currentTime+dur);
+}
+
+// ── Public API ────────────────────────────────────
+window.startLofi=function(){
+  if(lofiStarted) return;
+  if(LF.state==='suspended') LF.resume();
+  lofiStarted=true;
+  window._lofiStarted=true;
+  initLofiMaster();
+  composeLofi();
+  lofiFadeIn(4);
+  if(window._musicBtn){window._musicBtn.style.display='flex';window._musicBtn.style.color='#ff9ec8';}
+};
+window.stopLofi=function(){
+  lofiFadeOut(2);
+  setTimeout(()=>{lofiStarted=false;window._lofiStarted=false;},2500);
+  if(window._musicBtn) window._musicBtn.style.color='#4a6580';
+};
+window.setLofiVolume=function(v){
+  if(!lofiMaster) return;
+  lofiMaster.gain.setTargetAtTime(v, LF.currentTime, 0.5);
+};
+
+})();
+</script>
+
+<script>
+// ════════════════════════════════════════════════════
+// 🌸 LOFI RADIO — YouTube Stream Player
+// ════════════════════════════════════════════════════
+(function(){
 const LOFI_STATIONS = [
   { id: 'jfKfPfyJRdk', name: 'lofi hip hop radio',  emoji: '📻', desc: 'beats to relax/study to' },
   { id: '5qap5aO4i9A', name: 'lofi girl — sleep',   emoji: '🌙', desc: 'sleep beats' },
@@ -1904,49 +3712,39 @@ const LOFI_STATIONS = [
   { id: 'Na0w3Mz46GA', name: 'coffee shop radio',   emoji: '☕', desc: 'jazz & bossa nova' },
   { id: 'rUxyKA_-grg', name: 'chillhop radio',      emoji: '🐢', desc: 'jazzy beats' },
 ];
-
 let currentStation = 0;
 let lofiVolume = 0.6;
 window._lofiStarted = false;
 
 function buildLofiUI() {
   if (document.getElementById('lofiRadioWrap')) return;
-
-  // Hidden iframe for audio
   const iframeWrap = document.createElement('div');
   iframeWrap.id = 'lofiIframeWrap';
   iframeWrap.style.cssText = 'position:fixed;bottom:-9999px;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;z-index:-1';
   iframeWrap.innerHTML = '<iframe id="lofiYTFrame" width="1" height="1" frameborder="0" allow="autoplay; encrypted-media"></iframe>';
   document.body.appendChild(iframeWrap);
 
-  // Radio widget UI
   const ui = document.createElement('div');
   ui.id = 'lofiRadioWrap';
   ui.style.cssText = 'display:none;position:fixed;bottom:18px;right:78px;width:268px;z-index:49;font-family:Nunito,sans-serif';
-  ui.innerHTML = `
-    <div style="background:rgba(22,8,28,0.94);border:1px solid rgba(255,140,200,0.22);border-radius:16px;padding:12px 14px;backdrop-filter:blur(14px);box-shadow:0 6px 32px rgba(160,60,160,0.18)">
-      <div style="display:flex;align-items:center;gap:9px;margin-bottom:9px">
-        <div id="lrDot" style="width:8px;height:8px;border-radius:50%;background:#555;flex-shrink:0;transition:all 0.4s"></div>
-        <div style="flex:1;min-width:0">
-          <div id="lrName" style="font-size:11.5px;font-weight:800;color:#f0d8ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
-          <div id="lrDesc" style="font-size:9px;color:rgba(255,170,220,0.5);margin-top:1px;letter-spacing:0.3px"></div>
-        </div>
-        <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
-          <span style="font-size:9px;color:rgba(255,170,220,0.4)">vol</span>
-          <input id="lrVol" type="range" min="0" max="100" value="60"
-            style="width:48px;height:3px;accent-color:#ff88cc;cursor:pointer"
-            oninput="window.setLofiVolume(this.value/100)">
-        </div>
+  ui.innerHTML = `<div style="background:rgba(22,8,28,0.94);border:1px solid rgba(255,140,200,0.22);border-radius:16px;padding:12px 14px;backdrop-filter:blur(14px);box-shadow:0 6px 32px rgba(160,60,160,0.18)">
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:9px">
+      <div id="lrDot" style="width:8px;height:8px;border-radius:50%;background:#555;flex-shrink:0;transition:all 0.4s"></div>
+      <div style="flex:1;min-width:0">
+        <div id="lrName" style="font-size:11.5px;font-weight:800;color:#f0d8ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+        <div id="lrDesc" style="font-size:9px;color:rgba(255,170,220,0.5);margin-top:1px;letter-spacing:0.3px"></div>
       </div>
-      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px" id="lrBtns"></div>
-      <div style="display:flex;align-items:center;justify-content:space-between">
-        <div style="font-size:8.5px;color:rgba(255,160,210,0.35);letter-spacing:0.5px">🎵 bloom radio</div>
-        <a id="lrLink" href="#" target="_blank" rel="noopener"
-          style="font-size:8px;color:rgba(255,140,200,0.35);text-decoration:none;transition:color 0.2s"
-          onmouseover="this.style.color='rgba(255,140,200,0.8)'"
-          onmouseout="this.style.color='rgba(255,140,200,0.35)'">open on youtube ↗</a>
+      <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+        <span style="font-size:9px;color:rgba(255,170,220,0.4)">vol</span>
+        <input id="lrVol" type="range" min="0" max="100" value="60" style="width:48px;height:3px;accent-color:#ff88cc;cursor:pointer" oninput="window.setLofiVolume(this.value/100)">
       </div>
-    </div>`;
+    </div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px" id="lrBtns"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:8.5px;color:rgba(255,160,210,0.35);letter-spacing:0.5px">🎵 bloom radio</div>
+      <a id="lrLink" href="#" target="_blank" rel="noopener" style="font-size:8px;color:rgba(255,140,200,0.35);text-decoration:none;transition:color 0.2s" onmouseover="this.style.color='rgba(255,140,200,0.8)'" onmouseout="this.style.color='rgba(255,140,200,0.35)'">open on youtube ↗</a>
+    </div>
+  </div>`;
   document.body.appendChild(ui);
   refreshStationUI();
 }
@@ -1963,14 +3761,7 @@ function refreshStationUI() {
   if (btnsEl) {
     btnsEl.innerHTML = LOFI_STATIONS.map((st, i) => {
       const active = i === currentStation;
-      return `<button onclick="window.switchLofiStation(${i})" id="lrBtn${i}" style="
-        background:${active ? 'rgba(255,110,190,0.22)' : 'rgba(255,255,255,0.04)'};
-        border:1px solid ${active ? 'rgba(255,110,190,0.45)' : 'rgba(255,255,255,0.07)'};
-        border-radius:20px;padding:3px 8px;
-        font-family:Nunito,sans-serif;font-size:9px;font-weight:700;
-        color:${active ? '#ffb0e0' : 'rgba(255,255,255,0.35)'};
-        cursor:pointer;transition:all 0.2s;white-space:nowrap
-      ">${st.emoji} ${st.name.split(' ').slice(0,2).join(' ')}</button>`;
+      return `<button onclick="window.switchLofiStation(${i})" style="background:${active?'rgba(255,110,190,0.22)':'rgba(255,255,255,0.04)'};border:1px solid ${active?'rgba(255,110,190,0.45)':'rgba(255,255,255,0.07)'};border-radius:20px;padding:3px 8px;font-family:Nunito,sans-serif;font-size:9px;font-weight:700;color:${active?'#ffb0e0':'rgba(255,255,255,0.35)'};cursor:pointer;transition:all 0.2s;white-space:nowrap">${st.emoji} ${st.name.split(' ').slice(0,2).join(' ')}</button>`;
     }).join('');
   }
 }
@@ -1979,7 +3770,7 @@ function setDot(playing) {
   const dot = document.getElementById('lrDot');
   if (!dot) return;
   dot.style.background = playing ? '#ff88cc' : '#555';
-  dot.style.boxShadow = playing ? '0 0 7px #ff88cc, 0 0 14px rgba(255,136,204,0.4)' : 'none';
+  dot.style.boxShadow = playing ? '0 0 7px #ff88cc,0 0 14px rgba(255,136,204,0.4)' : 'none';
   dot.style.animation = playing ? 'blink 1.4s ease-in-out infinite' : 'none';
 }
 
@@ -1988,16 +3779,14 @@ window.switchLofiStation = function(idx) {
   refreshStationUI();
   const frame = document.getElementById('lofiYTFrame');
   const s = LOFI_STATIONS[idx];
-  if (frame) {
-    frame.src = 'https://www.youtube.com/embed/' + s.id + '?autoplay=1&enablejsapi=1';
-  }
+  if (frame) frame.src = 'https://www.youtube.com/embed/' + s.id + '?autoplay=1&enablejsapi=1';
   setDot(true);
 };
 
 window.startLofi = function() {
   if (!document.getElementById('lofiRadioWrap')) buildLofiUI();
   const ui = document.getElementById('lofiRadioWrap');
-  if (ui) { ui.style.display = 'block'; ui.style.animation = 'fadeUp 0.4s forwards'; }
+  if (ui) ui.style.display = 'block';
   const frame = document.getElementById('lofiYTFrame');
   const s = LOFI_STATIONS[currentStation];
   if (frame) frame.src = 'https://www.youtube.com/embed/' + s.id + '?autoplay=1&enablejsapi=1';
@@ -2018,12 +3807,7 @@ window.setLofiVolume = function(v) {
   lofiVolume = Math.max(0, Math.min(1, v));
   const frame = document.getElementById('lofiYTFrame');
   if (frame && frame.contentWindow) {
-    try {
-      frame.contentWindow.postMessage(JSON.stringify({
-        event: 'command', func: 'setVolume',
-        args: [Math.round(lofiVolume * 100)]
-      }), '*');
-    } catch(e) {}
+    try { frame.contentWindow.postMessage(JSON.stringify({event:'command',func:'setVolume',args:[Math.round(lofiVolume*100)]}), '*'); } catch(e) {}
   }
   const slider = document.getElementById('lrVol');
   if (slider) slider.value = Math.round(lofiVolume * 100);
@@ -2034,8 +3818,301 @@ if (document.readyState === 'loading') {
 } else {
   buildLofiUI();
 }
-
 })();
+</script>
+
+<script>
+// ════════════════════════════════════════════════════
+// 👥 FRIENDS, USERNAME & WEEKLY LEADERBOARD
+// ════════════════════════════════════════════════════
+
+function getISOWeek() {
+  const now = new Date();
+  const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+  return d.getUTCFullYear() + '-W' + String(weekNo).padStart(2, '0');
+}
+
+function getWeekLabel() {
+  const iso = getISOWeek();
+  const [yr, wk] = iso.split('-W');
+  return 'Week ' + wk + ', ' + yr;
+}
+
+async function publishPublicProfile() {
+  const user = window._fbUser;
+  if (!user) return;
+  const data = loadData();
+  const isoWeek = getISOWeek();
+  const snap = data.weeklyXPSnapshot || {};
+  const baseXP = snap[isoWeek] ?? (data.totalXP || 0);
+  const weeklyXP = Math.max(0, (data.totalXP || 0) - baseXP);
+  const sem = data.semesters && data.semesters[data.currentSemester];
+  const cw = data.currentWeek || 1;
+  let avg = 0;
+  if (sem && sem.skills && sem.skills.length) {
+    avg = Math.round(sem.skills.reduce((s, sk) => s + pct(sk, cw), 0) / sem.skills.length);
+  }
+  try {
+    const ref = window._fbDoc(window._fbDb, 'users', user.uid, 'public', 'profile');
+    await window._fbSetDoc(ref, {
+      username: data.username || '',
+      displayName: data.playerName || user.displayName || 'Player',
+      weeklyXP,
+      totalXP: data.totalXP || 0,
+      isoWeek,
+      grade: getGrade(avg).short,
+      updatedAt: Date.now()
+    });
+  } catch(e) { console.warn('publishPublicProfile error', e); }
+}
+
+let _publishTimer = null;
+function debouncedPublish() {
+  clearTimeout(_publishTimer);
+  _publishTimer = setTimeout(publishPublicProfile, 1500);
+}
+
+// Wrap awardXP to track weekly XP
+const _origAwardXP = typeof awardXP === 'function' ? awardXP : null;
+if (_origAwardXP) {
+  window.awardXP = function(skillId, amount, label) {
+    const data = loadData();
+    const isoWeek = getISOWeek();
+    if (!data.weeklyXPSnapshot) data.weeklyXPSnapshot = {};
+    if (data.weeklyXPSnapshot[isoWeek] === undefined) {
+      data.weeklyXPSnapshot[isoWeek] = data.totalXP || 0;
+    }
+    save(data);
+    _origAwardXP(skillId, amount, label);
+    debouncedPublish();
+  };
+}
+
+async function fetchLeaderboardData() {
+  const user = window._fbUser;
+  if (!user) return [];
+  const data = loadData();
+  const friends = data.friends || [];
+  const isoWeek = getISOWeek();
+  const entries = [];
+
+  // Own profile
+  try {
+    const ref = window._fbDoc(window._fbDb, 'users', user.uid, 'public', 'profile');
+    const snap = await window._fbGetDoc(ref);
+    if (snap.exists()) {
+      const d = snap.data();
+      entries.push({ uid: user.uid, name: d.displayName || 'You', username: d.username || '', weeklyXP: d.isoWeek === isoWeek ? (d.weeklyXP || 0) : 0, isMe: true });
+    } else {
+      entries.push({ uid: user.uid, name: data.playerName || 'You', username: data.username || '', weeklyXP: 0, isMe: true });
+    }
+  } catch(e) {}
+
+  // Friends
+  for (const f of friends) {
+    try {
+      const ref = window._fbDoc(window._fbDb, 'users', f.uid, 'public', 'profile');
+      const snap = await window._fbGetDoc(ref);
+      if (snap.exists()) {
+        const d = snap.data();
+        entries.push({ uid: f.uid, name: d.displayName || f.displayName || f.username, username: d.username || f.username || '', weeklyXP: d.isoWeek === isoWeek ? (d.weeklyXP || 0) : 0, isMe: false });
+      } else {
+        entries.push({ uid: f.uid, name: f.displayName || f.username, username: f.username || '', weeklyXP: 0, isMe: false });
+      }
+    } catch(e) {}
+  }
+
+  return entries.sort((a, b) => b.weeklyXP - a.weeklyXP);
+}
+
+async function renderFriendsView() {
+  const panel = document.getElementById('friendsPanel');
+  if (!panel) return;
+  panel.innerHTML = '<div style="color:var(--text-dim);font-family:Share Tech Mono,monospace;font-size:11px;letter-spacing:2px;padding:32px;text-align:center">LOADING...</div>';
+
+  const data = loadData();
+  const friends = data.friends || [];
+  const [leaderboard] = await Promise.all([fetchLeaderboardData()]);
+
+  const medal = ['🥇','🥈','🥉'];
+
+  panel.innerHTML = `<div class="friends-layout">
+    <div>
+      <div class="add-friend-box" style="margin-bottom:18px">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:3px;color:var(--text-dim);margin-bottom:10px">ADD FRIEND</div>
+        <div style="display:flex;gap:8px">
+          <input id="friendUsernameInp" class="form-input" placeholder="@username" style="flex:1" onkeydown="if(event.key==='Enter')addFriendByUsername()">
+          <button onclick="addFriendByUsername()" style="background:rgba(10,132,255,0.1);border:1px solid var(--blue-dim);color:var(--blue);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;padding:10px 16px;cursor:pointer;transition:all 0.2s">ADD</button>
+        </div>
+        <div id="addFriendStatus" style="font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;margin-top:6px;min-height:16px"></div>
+      </div>
+
+      <div class="leaderboard-wrap" style="padding:16px">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:3px;color:var(--text-dim);margin-bottom:12px">FRIENDS LIST</div>
+        ${friends.length === 0 ? '<div style="color:var(--text-dim);font-size:11px;font-family:Share Tech Mono,monospace;padding:12px 0">No friends yet — add one above!</div>' :
+          friends.map(f => `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+            <div>
+              <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;color:var(--white)">${f.displayName||f.username}</div>
+              <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim)">@${f.username}</div>
+            </div>
+            <button onclick="removeFriend('${f.uid}')" style="background:none;border:1px solid rgba(255,50,80,0.3);color:rgba(255,50,80,0.5);font-family:'Share Tech Mono',monospace;font-size:9px;padding:4px 10px;cursor:pointer;letter-spacing:1px;border-radius:3px;transition:all 0.2s" onmouseenter="this.style.borderColor='rgba(255,50,80,0.8)';this.style.color='rgba(255,50,80,0.9)'" onmouseleave="this.style.borderColor='rgba(255,50,80,0.3)';this.style.color='rgba(255,50,80,0.5)'">REMOVE</button>
+          </div>`).join('')
+        }
+      </div>
+    </div>
+
+    <div class="leaderboard-wrap" style="padding:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:3px;color:var(--text-dim)">WEEKLY LEADERBOARD</div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--blue)">${getWeekLabel()}</div>
+      </div>
+      ${leaderboard.length === 0 ? '<div style="color:var(--text-dim);font-size:11px;font-family:Share Tech Mono,monospace">No data yet</div>' :
+        leaderboard.map((e, i) => `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);${e.isMe?'background:rgba(10,132,255,0.04);':''}">
+          <div style="font-size:${i<3?'18':'12'}px;width:24px;text-align:center">${medal[i]||('#'+(i+1))}</div>
+          <div style="flex:1">
+            <div style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;color:${e.isMe?'var(--blue-bright)':'var(--white)'}">${e.name}${e.isMe?' <span style="font-size:9px;color:var(--text-dim)">(you)</span>':''}</div>
+            ${e.username?`<div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim)">@${e.username}</div>`:''}
+          </div>
+          <div style="font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;color:var(--gold)">${e.weeklyXP} <span style="font-size:9px;color:var(--text-dim)">XP</span></div>
+        </div>`).join('')
+      }
+    </div>
+  </div>`;
+}
+
+async function addFriendByUsername() {
+  const inp = document.getElementById('friendUsernameInp');
+  const status = document.getElementById('addFriendStatus');
+  if (!inp || !status) return;
+  const raw = inp.value.trim().replace(/^@/, '').toLowerCase();
+  if (!raw) return;
+  const user = window._fbUser;
+  if (!user) return;
+  status.style.color = 'var(--text-dim)';
+  status.textContent = 'Searching...';
+  try {
+    const ref = window._fbDoc(window._fbDb, 'usernames', raw);
+    const snap = await window._fbGetDoc(ref);
+    if (!snap.exists()) { status.style.color='var(--red)'; status.textContent='User not found'; return; }
+    const { uid, displayName } = snap.data();
+    if (uid === user.uid) { status.style.color='var(--red)'; status.textContent="That's you!"; return; }
+    const data = loadData();
+    if (!data.friends) data.friends = [];
+    if (data.friends.find(f => f.uid === uid)) { status.style.color='var(--gold)'; status.textContent='Already friends'; return; }
+    data.friends.push({ uid, username: raw, displayName: displayName || raw });
+    save(data);
+    inp.value = '';
+    status.style.color = 'var(--green)';
+    status.textContent = 'Added @' + raw + '!';
+    renderFriendsView();
+  } catch(e) { status.style.color='var(--red)'; status.textContent='Error: '+e.message; }
+}
+
+function removeFriend(uid) {
+  if (!confirm('Remove this friend?')) return;
+  const data = loadData();
+  data.friends = (data.friends || []).filter(f => f.uid !== uid);
+  save(data);
+  renderFriendsView();
+}
+
+// Username functions
+let _usernameCheckTimer = null;
+function onUsernameInput(val) {
+  const clean = val.toLowerCase().replace(/[^a-z0-9_]/g,'');
+  const inp = document.getElementById('usernameInput');
+  if (inp && inp.value !== clean) inp.value = clean;
+  const status = document.getElementById('usernameStatus');
+  if (!status) return;
+  if (!clean) { status.textContent = ''; return; }
+  if (clean.length < 3) { status.style.color='var(--red)'; status.textContent='Minimum 3 characters'; return; }
+  status.style.color = 'var(--text-dim)';
+  status.textContent = 'Checking availability...';
+  clearTimeout(_usernameCheckTimer);
+  _usernameCheckTimer = setTimeout(() => checkUsernameAvailability(clean), 500);
+}
+
+async function checkUsernameAvailability(username) {
+  const status = document.getElementById('usernameStatus');
+  if (!status) return;
+  const data = loadData();
+  if (username === data.username) { status.style.color='var(--green)'; status.textContent='✓ Your current username'; return; }
+  try {
+    const ref = window._fbDoc(window._fbDb, 'usernames', username);
+    const snap = await window._fbGetDoc(ref);
+    if (snap.exists()) { status.style.color='var(--red)'; status.textContent='✗ @'+username+' is taken'; }
+    else { status.style.color='var(--green)'; status.textContent='✓ @'+username+' is available!'; }
+  } catch(e) { status.style.color='var(--text-dim)'; status.textContent='Could not check availability'; }
+}
+
+async function saveUsername() {
+  const inp = document.getElementById('usernameInput');
+  const status = document.getElementById('usernameStatus');
+  if (!inp || !status) return;
+  const username = inp.value.trim().toLowerCase();
+  if (!username || username.length < 3) { status.style.color='var(--red)'; status.textContent='Username must be at least 3 characters'; return; }
+  const user = window._fbUser;
+  if (!user) return;
+  status.style.color = 'var(--text-dim)';
+  status.textContent = 'Saving...';
+  try {
+    const data = loadData();
+    // Delete old username doc
+    if (data.username && data.username !== username) {
+      try { await window._fbDeleteDoc(window._fbDoc(window._fbDb, 'usernames', data.username)); } catch(e) {}
+    }
+    // Check availability
+    const checkRef = window._fbDoc(window._fbDb, 'usernames', username);
+    const checkSnap = await window._fbGetDoc(checkRef);
+    if (checkSnap.exists() && checkSnap.data().uid !== user.uid) {
+      status.style.color = 'var(--red)';
+      status.textContent = '✗ Username already taken';
+      return;
+    }
+    // Write username doc
+    await window._fbSetDoc(checkRef, { uid: user.uid, displayName: data.playerName || user.displayName || 'Player', createdAt: Date.now() });
+    data.username = username;
+    save(data);
+    status.style.color = 'var(--green)';
+    status.textContent = '✓ Username saved as @' + username;
+    publishPublicProfile();
+  } catch(e) { status.style.color='var(--red)'; status.textContent='Error: '+e.message; }
+}
+
+function initUsernameInput() {
+  const inp = document.getElementById('usernameInput');
+  if (inp) {
+    const data = loadData();
+    if (data.username) inp.value = data.username;
+  }
+}
+
+// Hook render() to also init username input
+const _origRenderForFriends = window.render || render;
+if (typeof _origRenderForFriends === 'function') {
+  const __prev = _origRenderForFriends;
+  window.render = function() { __prev.apply(this, arguments); initUsernameInput(); };
+}
+
+// Publish public profile on login
+const _origShowWelcomeForFriends = typeof showWelcome === 'function' ? showWelcome : null;
+if (_origShowWelcomeForFriends) {
+  window.showWelcome = function() {
+    const data = loadData();
+    const isoWeek = getISOWeek();
+    if (!data.weeklyXPSnapshot) data.weeklyXPSnapshot = {};
+    if (data.weeklyXPSnapshot[isoWeek] === undefined) {
+      data.weeklyXPSnapshot[isoWeek] = data.totalXP || 0;
+      save(data);
+    }
+    _origShowWelcomeForFriends.apply(this, arguments);
+    setTimeout(publishPublicProfile, 1000);
+  };
+}
 </script>
 </body>
 </html>
