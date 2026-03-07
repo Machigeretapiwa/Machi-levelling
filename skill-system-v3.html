@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SYSTEM // Skill Tracker</title>
-<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script type="module">
 // ════════════════════════════════════════════════════
 // FIREBASE CONFIG — paste your config from Firebase Console here
@@ -12,7 +12,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc }
+import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, deleteDoc, writeBatch }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -36,6 +36,12 @@ window._fbSignOut          = signOut;
 window._fbDoc              = doc;
 window._fbGetDoc           = getDoc;
 window._fbSetDoc           = setDoc;
+window._fbCollection       = collection;
+window._fbQuery            = query;
+window._fbWhere            = where;
+window._fbGetDocs          = getDocs;
+window._fbDeleteDoc        = deleteDoc;
+window._fbWriteBatch       = writeBatch;
 
 // Watch auth state — drives the whole app flow
 onAuthStateChanged(auth, user => {
@@ -528,6 +534,283 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
   .lic-card{width:150px;}
   #chatPanel{width:calc(100vw - 16px);left:8px;}
 }
+
+/* ══════════════════════════════════════════════════════
+   🌸 FEMININE THEME — Pastel Bloom
+   ══════════════════════════════════════════════════════ */
+body.theme-feminine {
+  --bg:#1a0f1e;--bg2:#221428;--panel:#2a1a30;--panel2:#321e3a;
+  --border:#5a2d6e;--border-glow:#c96fd8;
+  --blue:#e87ee8;--blue-dim:#8a3d9a;--blue-bright:#f5a8f5;
+  --cyan:#ff9ec8;--purple:#d98cf0;--gold:#ffb3d9;--gold-dim:#8a4d6d;
+  --red:#ff7ab0;--green:#a8f0c8;--white:#fce8ff;--grey:#c8a0d8;--text-dim:#9070a8;
+  --grade-4:#9080a8;--grade-3:#e8a0d8;--grade-2:#e87ee8;--grade-1:#ffb3d9;--special:#ff6bb0;
+  --steel:#9080a8;--bronze:#e8a0d8;--silver:#d8c0e8;--goldC:#ffb3d9;--ruby:#ff6bb0;
+  font-family:'Nunito','Rajdhani',sans-serif;
+}
+
+body.theme-feminine #particles { opacity: 0.6; }
+
+/* Feminine background gradient */
+body.theme-feminine::after {
+  content:'';
+  position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(233,130,255,0.07) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(255,120,180,0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(180,100,230,0.04) 0%, transparent 70%);
+  pointer-events:none;z-index:0;
+}
+
+/* Soft scanlines override */
+body.theme-feminine::before {
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(255,150,220,0.015) 3px,rgba(255,150,220,0.015) 6px);
+}
+
+/* Login screen */
+body.theme-feminine .ls-bg {
+  background:radial-gradient(ellipse at 50% 40%,rgba(220,100,255,0.12) 0%,transparent 65%);
+}
+body.theme-feminine .ls-ring { border-color:rgba(220,100,255,0.15); }
+body.theme-feminine .ls-ring:nth-child(3) { border-color:rgba(220,100,255,0.07); }
+body.theme-feminine .ls-eyebrow { color:var(--blue); font-family:'Nunito',sans-serif; letter-spacing:4px; }
+body.theme-feminine .ls-title { font-family:'Nunito',sans-serif; font-weight:800; letter-spacing:2px; text-shadow:0 0 50px rgba(220,100,255,0.6); }
+body.theme-feminine .ls-title span { color:var(--blue-bright); }
+body.theme-feminine .ls-divider { background:linear-gradient(90deg,transparent,var(--blue-dim),transparent); }
+body.theme-feminine .ls-google-btn { border-color:var(--border-glow); font-family:'Nunito',sans-serif; }
+body.theme-feminine .ls-google-btn:hover { border-color:var(--blue); box-shadow:0 0 28px rgba(220,100,255,0.3); }
+
+/* Start screen */
+body.theme-feminine .ss-ring { border-color:rgba(220,100,255,0.15); }
+body.theme-feminine .ss-ring:nth-child(2) { border-color:rgba(220,100,255,0.08); }
+body.theme-feminine .ss-ring:nth-child(3) { border-color:rgba(220,100,255,0.04); }
+body.theme-feminine .ss-glow { background:radial-gradient(ellipse,rgba(220,100,255,0.12) 0%,transparent 70%); }
+body.theme-feminine .ss-hex { color:rgba(220,100,255,0.08); }
+body.theme-feminine .ss-eyebrow { color:var(--blue); font-family:'Nunito',sans-serif; letter-spacing:4px; }
+body.theme-feminine .ss-title { font-family:'Nunito',sans-serif; font-weight:800; letter-spacing:3px; text-shadow:0 0 60px rgba(220,100,255,0.7); }
+body.theme-feminine .ss-title span { color:var(--blue-bright); }
+body.theme-feminine .ss-prompt { color:var(--blue); font-family:'Nunito',sans-serif; letter-spacing:3px; }
+body.theme-feminine #startScreen.continue-mode .ss-prompt-continue { color:var(--cyan); font-family:'Nunito',sans-serif; }
+
+/* Welcome screen */
+body.theme-feminine .ws-bg { background:radial-gradient(ellipse at 50% 50%,rgba(220,100,255,0.09) 0%,transparent 65%); }
+body.theme-feminine .ws-bar { background:linear-gradient(90deg,transparent,var(--blue-dim),transparent); }
+body.theme-feminine .ws-sys { font-family:'Nunito',sans-serif; color:var(--blue); letter-spacing:4px; }
+body.theme-feminine .ws-wlc { font-family:'Nunito',sans-serif; }
+body.theme-feminine .ws-name { font-family:'Nunito',sans-serif; font-weight:800; text-shadow:0 0 40px rgba(220,100,255,0.5); }
+body.theme-feminine .ws-enter { font-family:'Nunito',sans-serif; color:var(--blue); }
+
+/* Header */
+body.theme-feminine .system-label { font-family:'Nunito',sans-serif; color:var(--blue); letter-spacing:4px; }
+body.theme-feminine .header h1 { font-family:'Nunito',sans-serif; font-weight:800; letter-spacing:2px; text-shadow:0 0 40px rgba(220,100,255,0.6); }
+body.theme-feminine .header h1 span { color:var(--blue-bright); }
+body.theme-feminine .overall-rank { background:linear-gradient(135deg,rgba(255,179,217,0.1),rgba(255,179,217,0.04)); border-color:rgba(255,179,217,0.3); color:var(--gold); }
+
+/* Nav */
+body.theme-feminine .nav-btn { font-family:'Nunito',sans-serif; letter-spacing:1px; }
+body.theme-feminine .nav-btn:hover { color:var(--blue-bright); }
+body.theme-feminine .nav-btn.active { color:var(--blue-bright); border-bottom-color:var(--blue-bright); text-shadow:0 0 12px rgba(245,168,245,0.5); }
+
+/* Cards */
+body.theme-feminine .skill-card { border-radius:12px; }
+body.theme-feminine .skill-card::before { background:linear-gradient(90deg,transparent,var(--card-color,var(--blue)),transparent); }
+body.theme-feminine .card-title { font-family:'Nunito',sans-serif; font-weight:700; }
+body.theme-feminine .grade-badge { border-radius:20px; font-family:'Nunito',sans-serif; }
+body.theme-feminine .weekly-tag { color:var(--gold); font-family:'Nunito',sans-serif; letter-spacing:1px; }
+body.theme-feminine .wobj-check { border-radius:4px; border-color:rgba(255,179,217,0.4); }
+body.theme-feminine .wobj-check.done { background:var(--gold); border-color:var(--gold); }
+body.theme-feminine .task-check { border-radius:3px; }
+body.theme-feminine .add-skill-btn { border-radius:8px; font-family:'Nunito',sans-serif; letter-spacing:1px; }
+body.theme-feminine .add-skill-btn:hover { border-color:var(--blue); color:var(--blue); background:rgba(220,100,255,0.04); }
+body.theme-feminine .proof-input { border-radius:6px; }
+
+/* License panel */
+body.theme-feminine .lic-card { border-radius:10px; }
+body.theme-feminine .lic-tier { font-family:'Nunito',sans-serif; letter-spacing:1px; }
+body.theme-feminine .lic-grade-label { font-family:'Nunito',sans-serif; }
+
+/* Grade chips */
+body.theme-feminine .grade-chip { border-radius:20px; font-family:'Nunito',sans-serif; letter-spacing:0.5px; }
+
+/* Modals */
+body.theme-feminine .modal { border-radius:14px; }
+body.theme-feminine .modal::before { background:linear-gradient(90deg,var(--blue),var(--cyan),var(--purple)); }
+body.theme-feminine .modal h2 { font-family:'Nunito',sans-serif; color:var(--blue-bright); }
+body.theme-feminine .form-label { font-family:'Nunito',sans-serif; letter-spacing:1px; }
+body.theme-feminine .form-input,.theme-feminine .form-select,.theme-feminine .form-textarea { border-radius:6px; font-family:'Nunito',sans-serif; }
+
+/* Stat cards */
+body.theme-feminine .stat-card { border-radius:10px; }
+body.theme-feminine .stat-num { font-family:'Nunito',sans-serif; font-weight:800; }
+body.theme-feminine .stat-label { font-family:'Nunito',sans-serif; letter-spacing:1px; }
+
+/* Return / sign out buttons */
+body.theme-feminine .return-btn { border-radius:8px; font-family:'Nunito',sans-serif; letter-spacing:1px; }
+body.theme-feminine .return-btn:hover { border-color:var(--blue); color:var(--blue-bright); box-shadow:0 0 16px rgba(220,100,255,0.2); }
+body.theme-feminine #signOutBtn { border-radius:6px; font-family:'Nunito',sans-serif; }
+body.theme-feminine #signOutBtn:hover { border-color:var(--red); color:var(--red); }
+
+/* Chat */
+body.theme-feminine #chatBtn { border-radius:50%; background:rgba(42,26,48,0.95); border-color:var(--border-glow); color:var(--blue); }
+body.theme-feminine #chatPanel { border-radius:14px; border-color:var(--border-glow); }
+body.theme-feminine .chat-hdr-name { font-family:'Nunito',sans-serif; }
+body.theme-feminine .chip { border-radius:20px; font-family:'Nunito',sans-serif; border-color:var(--border-glow); color:var(--blue); }
+body.theme-feminine .chip:hover { background:rgba(220,100,255,0.1); }
+body.theme-feminine .bubble.ai { border-radius:14px 14px 14px 4px; background:rgba(50,30,58,0.9); border-color:var(--border-glow); font-family:'Nunito',sans-serif; }
+body.theme-feminine .bubble.usr { border-radius:14px 14px 4px 14px; background:rgba(220,100,255,0.2); font-family:'Nunito',sans-serif; }
+body.theme-feminine .chat-inp { border-radius:20px; font-family:'Nunito',sans-serif; }
+body.theme-feminine .chat-send { border-radius:50%; background:var(--blue); }
+
+/* XP toast */
+body.theme-feminine #xpToast { border-radius:20px; }
+
+/* Weekly complete burst */
+body.theme-feminine #wkCompleteBurst .wcb-title { font-family:'Nunito',sans-serif; }
+body.theme-feminine #wkCompleteBurst .wcb-text { font-family:'Nunito',sans-serif; color:var(--gold); }
+
+/* Name screen */
+body.theme-feminine .ne-eyebrow { font-family:'Nunito',sans-serif; color:var(--blue); }
+body.theme-feminine .ne-title { font-family:'Nunito',sans-serif; font-weight:800; }
+body.theme-feminine .ne-input { border-radius:8px; font-family:'Nunito',sans-serif; }
+body.theme-feminine .ne-btn { border-radius:8px; font-family:'Nunito',sans-serif; }
+
+/* Grade legend feminine labels */
+body.theme-feminine .g-4 { color:var(--steel); }
+body.theme-feminine .g-3 { color:var(--bronze); }
+body.theme-feminine .g-2 { color:var(--silver); }
+body.theme-feminine .g-1 { color:var(--goldC); }
+body.theme-feminine .g-s { color:var(--ruby); background:rgba(255,107,176,0.06); }
+
+/* ══════════════════════════════════════════════════════
+   👥 FRIENDS & LEADERBOARD
+   ══════════════════════════════════════════════════════ */
+.friends-layout { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+@media(max-width:700px){ .friends-layout { grid-template-columns:1fr; } }
+
+.friends-section-title {
+  font-family:'Orbitron',sans-serif; font-size:13px; letter-spacing:3px;
+  color:var(--blue-bright); margin-bottom:16px;
+  display:flex; align-items:center; gap:14px;
+}
+.friends-section-title::after { content:''; flex:1; height:1px; background:var(--border); }
+
+/* Add friend box */
+.add-friend-box {
+  background:var(--panel); border:1px solid var(--border); padding:20px; margin-bottom:24px;
+}
+.add-friend-row { display:flex; gap:8px; }
+.add-friend-inp {
+  flex:1; background:rgba(255,255,255,0.03); border:1px solid var(--border);
+  color:var(--white); font-family:'Share Tech Mono',monospace; font-size:12px;
+  padding:10px 14px; outline:none; transition:border-color 0.2s;
+}
+.add-friend-inp:focus { border-color:var(--blue); }
+.add-friend-inp::placeholder { color:var(--text-dim); }
+.add-friend-btn {
+  background:none; border:1px solid var(--blue-dim); color:var(--blue);
+  font-family:'Orbitron',monospace; font-size:10px; letter-spacing:1px;
+  padding:10px 16px; cursor:pointer; white-space:nowrap; transition:all 0.2s;
+}
+.add-friend-btn:hover { background:rgba(10,132,255,0.1); border-color:var(--blue); }
+.add-friend-status { font-family:'Share Tech Mono',monospace; font-size:9px; margin-top:8px; letter-spacing:1px; min-height:16px; }
+
+/* Friends list */
+.friend-row {
+  display:flex; align-items:center; gap:12px;
+  padding:12px 14px; background:var(--panel2); border:1px solid var(--border);
+  margin-bottom:8px; transition:border-color 0.2s;
+}
+.friend-row:hover { border-color:var(--border-glow); }
+.friend-avatar {
+  width:34px; height:34px; border-radius:50%;
+  background:linear-gradient(135deg,var(--blue-dim),var(--purple));
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Orbitron',sans-serif; font-size:12px; font-weight:900;
+  color:var(--white); flex-shrink:0; border:1px solid var(--border-glow);
+}
+.friend-info { flex:1; min-width:0; }
+.friend-name { font-family:'Orbitron',sans-serif; font-size:11px; letter-spacing:1px; color:var(--white); }
+.friend-meta { font-family:'Share Tech Mono',monospace; font-size:9px; color:var(--text-dim); margin-top:2px; letter-spacing:1px; }
+.friend-remove {
+  background:none; border:none; color:transparent; font-size:12px; cursor:pointer;
+  padding:4px 6px; transition:color 0.2s; flex-shrink:0;
+}
+.friend-row:hover .friend-remove { color:rgba(255,51,85,0.35); }
+.friend-remove:hover { color:var(--red)!important; }
+
+/* Leaderboard */
+.leaderboard-wrap { background:var(--panel); border:1px solid var(--border); }
+.lb-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 18px; border-bottom:1px solid var(--border);
+}
+.lb-title { font-family:'Orbitron',sans-serif; font-size:11px; letter-spacing:2px; color:var(--blue-bright); }
+.lb-week { font-family:'Share Tech Mono',monospace; font-size:9px; color:var(--text-dim); letter-spacing:1px; }
+.lb-row {
+  display:flex; align-items:center; gap:12px; padding:12px 18px;
+  border-bottom:1px solid rgba(255,255,255,0.03); transition:background 0.15s;
+}
+.lb-row:last-child { border-bottom:none; }
+.lb-row:hover { background:rgba(255,255,255,0.02); }
+.lb-row.lb-me { background:rgba(10,132,255,0.06); border-left:2px solid var(--blue); }
+.lb-rank {
+  font-family:'Orbitron',sans-serif; font-size:16px; font-weight:900;
+  width:28px; text-align:center; flex-shrink:0;
+}
+.lb-rank.r1 { color:var(--goldC); text-shadow:0 0 12px var(--goldC); }
+.lb-rank.r2 { color:var(--silver); }
+.lb-rank.r3 { color:var(--bronze); }
+.lb-rank.r4, .lb-rank.r5 { color:var(--text-dim); font-size:13px; }
+.lb-avatar {
+  width:30px; height:30px; border-radius:50%; flex-shrink:0;
+  background:linear-gradient(135deg,var(--blue-dim),var(--purple));
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Orbitron',sans-serif; font-size:10px; color:var(--white); font-weight:900;
+  border:1px solid var(--border-glow);
+}
+.lb-info { flex:1; min-width:0; }
+.lb-lb-name { font-family:'Orbitron',sans-serif; font-size:11px; letter-spacing:1px; color:var(--white); }
+.lb-lb-sub { font-family:'Share Tech Mono',monospace; font-size:8px; color:var(--text-dim); margin-top:1px; }
+.lb-xp-col { text-align:right; flex-shrink:0; }
+.lb-xp-num { font-family:'Orbitron',sans-serif; font-size:14px; font-weight:900; color:var(--cyan); }
+.lb-xp-lbl { font-family:'Share Tech Mono',monospace; font-size:8px; color:var(--text-dim); letter-spacing:1px; }
+.lb-bar-wrap { width:100%; margin-top:6px; }
+.lb-bar-bg { height:3px; background:rgba(255,255,255,0.05); overflow:hidden; }
+.lb-bar-fill { height:100%; background:linear-gradient(90deg,var(--blue),var(--cyan)); transition:width 1s cubic-bezier(0.4,0,0.2,1); }
+
+.lb-empty {
+  padding:48px 24px; text-align:center;
+  font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--text-dim); letter-spacing:1px;
+}
+
+/* Feminine theme overrides */
+body.theme-feminine .add-friend-box,
+body.theme-feminine .leaderboard-wrap { border-radius:10px; }
+body.theme-feminine .add-friend-inp { border-radius:6px; }
+body.theme-feminine .add-friend-btn { border-radius:6px; }
+body.theme-feminine .friend-row { border-radius:8px; }
+body.theme-feminine .lb-row.lb-me { border-left-color:var(--blue); background:rgba(220,100,255,0.06); }
+body.theme-feminine .lb-xp-num { color:var(--cyan); }
+body.theme-feminine .lb-bar-fill { background:linear-gradient(90deg,var(--blue),var(--cyan)); }
+</style>
+
+<style>
+/* Floating sakura particles for feminine theme */
+@keyframes sakuraFall {
+  0%   { transform:translateY(-20px) rotate(0deg); opacity:0; }
+  10%  { opacity:0.8; }
+  90%  { opacity:0.5; }
+  100% { transform:translateY(110vh) rotate(720deg); opacity:0; }
+}
+@keyframes sakuraSway {
+  0%,100% { margin-left:0; }
+  50%      { margin-left:30px; }
+}
+.sakura-petal {
+  position:fixed; top:-20px; font-size:16px;
+  pointer-events:none; z-index:3;
+  animation:sakuraFall linear infinite, sakuraSway ease-in-out infinite;
+}
 </style>
 </head>
 <body>
@@ -647,6 +930,7 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
       <button class="nav-btn active" onclick="switchView('skills',this)">SKILLS</button>
       <button class="nav-btn" onclick="switchView('stats',this)">STATISTICS</button>
       <button class="nav-btn" onclick="switchView('xp',this)">⚡ XP & STREAKS</button>
+      <button class="nav-btn" onclick="switchView('friends',this);renderFriendsView()">👥 FRIENDS</button>
       <button class="nav-btn" onclick="switchView('settings',this)">SETTINGS</button>
     </nav>
 
@@ -688,10 +972,24 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
       <div id="xpGlobalPanel"></div>
     </div>
 
+    <!-- FRIENDS & LEADERBOARD VIEW -->
+    <div id="view-friends" class="view">
+      <div id="friendsPanel"></div>
+    </div>
+
     <!-- SETTINGS VIEW -->
     <div id="view-settings" class="view">
       <div class="settings-wrap">
         <div class="form-group"><label class="form-label">PLAYER NAME</label><input class="form-input" id="playerNameInput" placeholder="Enter your name" oninput="savePlayerName(this.value)"></div>
+        <div class="form-group" style="margin-top:12px">
+          <label class="form-label">USERNAME <span style="color:var(--text-dim);font-size:8px;letter-spacing:1px">(PUBLIC · USED FOR FRIENDS)</span></label>
+          <div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap">
+            <input class="form-input" id="usernameInput" placeholder="e.g. hunter_zero" maxlength="20" style="flex:1;min-width:160px" oninput="onUsernameInput(this.value)">
+            <button onclick="saveUsername()" style="background:none;border:1px solid var(--blue-dim);color:var(--blue);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;padding:10px 16px;cursor:pointer;white-space:nowrap;transition:all 0.2s" onmouseenter="this.style.background='rgba(10,132,255,0.1)'" onmouseleave="this.style.background='none'">SET USERNAME</button>
+          </div>
+          <div id="usernameStatus" style="font-family:'Share Tech Mono',monospace;font-size:9px;margin-top:6px;letter-spacing:1px;min-height:16px"></div>
+          <div class="settings-note">Your username lets friends find and add you. Lowercase letters, numbers, and underscores only.</div>
+        </div>
         <div class="form-group" style="margin-top:16px">
           <label class="form-label">ARIA AI KEY <span style="color:var(--text-dim);font-size:8px;letter-spacing:1px">(FREE · GEMINI)</span></label>
           <input class="form-input" id="ariaKeyInput" type="password" placeholder="Paste Gemini API key…" oninput="saveAriaKey(this.value)">
@@ -702,6 +1000,19 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
           <label class="form-label">CURRENT WEEK NUMBER</label>
           <input class="form-input" id="currentWeekInput" type="number" min="1" max="20" placeholder="3" oninput="saveCurrentWeek(this.value)">
           <div class="settings-note">Update this each week — weekly objectives and licenses sync automatically.</div>
+        </div>
+        <!-- 🌸 THEME TOGGLE -->
+        <div style="margin-top:24px;padding:20px;background:var(--panel2);border:1px solid var(--border);border-radius:var(--theme-radius,0)">
+          <div style="font-family:'Orbitron','Nunito',sans-serif;font-size:11px;letter-spacing:2px;color:var(--text-dim);margin-bottom:14px">INTERFACE THEME</div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            <button id="themeDarkBtn" onclick="setTheme('dark')" style="flex:1;min-width:120px;padding:14px 10px;background:rgba(0,0,0,0.4);border:2px solid var(--border-glow);color:var(--white);font-family:'Orbitron','Nunito',sans-serif;font-size:10px;letter-spacing:2px;cursor:pointer;transition:all 0.25s;border-radius:var(--theme-radius,0)">
+              ⬡ DARK MODE<br><span style="font-size:9px;opacity:0.5;letter-spacing:1px">Tactical · Minimalist</span>
+            </button>
+            <button id="themeFemBtn" onclick="setTheme('feminine')" style="flex:1;min-width:120px;padding:14px 10px;background:rgba(220,100,255,0.06);border:2px solid rgba(220,100,255,0.3);color:#e87ee8;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.25s;border-radius:8px">
+              🌸 BLOOM MODE<br><span style="font-size:10px;opacity:0.6;font-weight:400">Soft · Pastel · Cute</span>
+            </button>
+          </div>
+          <div id="themeNote" style="font-family:'Share Tech Mono','Nunito',monospace;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:1px;opacity:0.6">Theme changes apply instantly — music will also switch style.</div>
         </div>
         <div style="margin-top:32px;padding-top:24px;border-top:1px solid var(--border)">
           <p class="settings-note" style="margin-bottom:16px">DANGER ZONE</p>
@@ -1471,6 +1782,417 @@ function renderXPGlobal(){
 }
 
 // ════════════════════════════════════════════════════
+// 👥 FRIENDS & USERNAME SYSTEM
+// Firestore structure:
+//   /usernames/{username}  → { uid, displayName, createdAt }
+//   /users/{uid}/public/profile → { username, weeklyXP:{[isoWeek]:xp}, totalXP, grade, displayName }
+//   /users/{uid}/appdata/progress → (existing — friends:[{uid,username,displayName}])
+// ════════════════════════════════════════════════════
+
+function getISOWeek() {
+  // Returns "YYYY-Www" e.g. "2026-W11"
+  const d = new Date();
+  const thursday = new Date(d);
+  thursday.setDate(d.getDate() - ((d.getDay() + 6) % 7) + 3);
+  const firstThursday = new Date(thursday.getFullYear(), 0, 4);
+  const week = 1 + Math.round(((thursday - firstThursday) / 86400000 - 3 + ((firstThursday.getDay() + 6) % 7)) / 7);
+  return `${thursday.getFullYear()}-W${String(week).padStart(2,'0')}`;
+}
+
+function getWeekLabel(isoWeek) {
+  // e.g. "2026-W11" → "Week 11, 2026"
+  const [year, wStr] = isoWeek.split('-W');
+  return `Week ${parseInt(wStr)}, ${year}`;
+}
+
+// ── Publish this user's public profile to Firestore ──
+async function publishPublicProfile() {
+  const user = window._fbUser; if (!user) return;
+  const data = loadData();
+  const totalXP = Object.values(data.xp || {}).reduce((s,v) => s+v, 0);
+  const sem = data.semesters[data.currentSemester];
+  const cw = data.currentWeek || 3;
+  const avg = sem && sem.skills.length
+    ? Math.round(sem.skills.reduce((s,sk)=>s+pct(sk,cw),0)/sem.skills.length)
+    : 0;
+  const grade = getGrade(avg);
+
+  // Calculate weekly XP: sum of XP awarded this ISO week
+  // We store weeklyXP as a cumulative snapshot per week
+  const isoWeek = getISOWeek();
+  const weeklyXP = (data.weeklyXPSnapshot && data.weeklyXPSnapshot[isoWeek]) || totalXP;
+
+  const profile = {
+    username: data.username || '',
+    displayName: data.playerName || 'PLAYER',
+    totalXP,
+    weeklyXP,
+    isoWeek,
+    grade: grade.short,
+    gradeColor: grade.color,
+    updatedAt: Date.now()
+  };
+  try {
+    const ref = window._fbDoc(window._fbDb, 'users', user.uid, 'public', 'profile');
+    await window._fbSetDoc(ref, profile);
+  } catch(e) { console.warn('publishPublicProfile error', e); }
+}
+
+// Call publishPublicProfile whenever XP changes — hook into awardXP
+const _origAwardXP = window.awardXP;
+window.awardXP = function(skillId, amount, label) {
+  _origAwardXP && _origAwardXP(skillId, amount, label);
+  // Snapshot weekly XP
+  const data = loadData();
+  const isoWeek = getISOWeek();
+  if (!data.weeklyXPSnapshot) data.weeklyXPSnapshot = {};
+  const totalXP = Object.values(data.xp || {}).reduce((s,v) => s+v, 0);
+  data.weeklyXPSnapshot[isoWeek] = totalXP;
+  save(data);
+  // Debounce publish
+  clearTimeout(window._publishTimer);
+  window._publishTimer = setTimeout(publishPublicProfile, 1500);
+};
+
+// ── USERNAME ──────────────────────────────────────────
+let _usernameCheckTimer = null;
+function onUsernameInput(val) {
+  const status = document.getElementById('usernameStatus');
+  clearTimeout(_usernameCheckTimer);
+  const clean = val.toLowerCase().replace(/[^a-z0-9_]/g,'');
+  if (document.getElementById('usernameInput')) document.getElementById('usernameInput').value = clean;
+  if (!clean) { if(status) status.textContent=''; return; }
+  if (clean.length < 3) { if(status){status.textContent='At least 3 characters required.';status.style.color='var(--text-dim)';} return; }
+  if(status){status.textContent='Checking…';status.style.color='var(--text-dim)';}
+  _usernameCheckTimer = setTimeout(() => checkUsernameAvailability(clean), 500);
+}
+
+async function checkUsernameAvailability(username) {
+  const status = document.getElementById('usernameStatus');
+  const data = loadData();
+  // If it's the user's own current username, it's fine
+  if (data.username && data.username === username) {
+    if(status){status.textContent='✓ This is your current username.';status.style.color='var(--green)';}
+    return true;
+  }
+  try {
+    const ref = window._fbDoc(window._fbDb, 'usernames', username);
+    const snap = await window._fbGetDoc(ref);
+    if (snap.exists()) {
+      if(status){status.textContent='✗ Username taken — try another.';status.style.color='var(--red)';}
+      return false;
+    } else {
+      if(status){status.textContent='✓ Available!';status.style.color='var(--green)';}
+      return true;
+    }
+  } catch(e) {
+    if(status){status.textContent='Could not check — try again.';status.style.color='var(--text-dim)';}
+    return false;
+  }
+}
+
+async function saveUsername() {
+  const inp = document.getElementById('usernameInput');
+  const status = document.getElementById('usernameStatus');
+  if (!inp) return;
+  const username = inp.value.trim().toLowerCase().replace(/[^a-z0-9_]/g,'');
+  if (username.length < 3) {
+    if(status){status.textContent='Username must be at least 3 characters.';status.style.color='var(--red)';}
+    return;
+  }
+  const data = loadData();
+  const user = window._fbUser;
+  if (!user) return;
+
+  // If same as current, do nothing
+  if (data.username === username) {
+    if(status){status.textContent='✓ Already saved.';status.style.color='var(--green)';}
+    return;
+  }
+
+  if(status){status.textContent='Saving…';status.style.color='var(--text-dim)';}
+
+  // Check availability one more time
+  const available = await checkUsernameAvailability(username);
+  if (!available) return;
+
+  try {
+    // Delete old username doc if exists
+    if (data.username) {
+      try { await window._fbDeleteDoc(window._fbDoc(window._fbDb, 'usernames', data.username)); } catch(e){}
+    }
+    // Write new username doc
+    await window._fbSetDoc(window._fbDoc(window._fbDb, 'usernames', username), {
+      uid: user.uid,
+      displayName: data.playerName || 'PLAYER',
+      createdAt: Date.now()
+    });
+    // Save to user data
+    data.username = username;
+    save(data);
+    await publishPublicProfile();
+    if(status){status.textContent='✓ Username set to @'+username;status.style.color='var(--green)';}
+  } catch(e) {
+    if(status){status.textContent='Error saving — please try again.';status.style.color='var(--red)';}
+    console.error('saveUsername error', e);
+  }
+}
+
+// Pre-fill username input when settings loads
+function initUsernameInput() {
+  const inp = document.getElementById('usernameInput');
+  const status = document.getElementById('usernameStatus');
+  const data = loadData();
+  if (inp && data.username) {
+    inp.value = data.username;
+    if(status){status.textContent='✓ Current: @'+data.username;status.style.color='var(--green)';}
+  }
+}
+
+// ── ADD FRIEND ────────────────────────────────────────
+async function addFriend() {
+  const inp = document.getElementById('addFriendInp');
+  const status = document.getElementById('addFriendStatus');
+  if (!inp || !status) return;
+  const username = inp.value.trim().toLowerCase().replace(/[^a-z0-9_]/g,'');
+  if (!username) return;
+
+  const data = loadData();
+
+  // Can't add yourself
+  if (data.username && data.username === username) {
+    status.textContent = "That's you! You can't add yourself.";
+    status.style.color = 'var(--text-dim)';
+    return;
+  }
+
+  // Check if already a friend
+  const existing = (data.friends || []).find(f => f.username === username);
+  if (existing) {
+    status.textContent = '@'+username+' is already in your friends list.';
+    status.style.color = 'var(--text-dim)';
+    return;
+  }
+
+  status.textContent = 'Searching…'; status.style.color = 'var(--text-dim)';
+
+  try {
+    const ref = window._fbDoc(window._fbDb, 'usernames', username);
+    const snap = await window._fbGetDoc(ref);
+    if (!snap.exists()) {
+      status.textContent = '✗ No player found with username @'+username;
+      status.style.color = 'var(--red)';
+      return;
+    }
+    const { uid, displayName } = snap.data();
+    // Add to friends list
+    if (!data.friends) data.friends = [];
+    data.friends.push({ uid, username, displayName: displayName || username });
+    save(data);
+    inp.value = '';
+    status.textContent = '✓ Added @'+username+'!';
+    status.style.color = 'var(--green)';
+    renderFriendsView();
+  } catch(e) {
+    status.textContent = 'Error — please try again.';
+    status.style.color = 'var(--red)';
+    console.error('addFriend error', e);
+  }
+}
+
+function removeFriend(username) {
+  if (!confirm('Remove @'+username+' from your friends list?')) return;
+  const data = loadData();
+  data.friends = (data.friends || []).filter(f => f.username !== username);
+  save(data);
+  renderFriendsView();
+}
+
+// ── LEADERBOARD ───────────────────────────────────────
+async function fetchLeaderboardData() {
+  const data = loadData();
+  const friends = data.friends || [];
+  const user = window._fbUser;
+  if (!user) return [];
+
+  // Fetch own public profile
+  const myRef = window._fbDoc(window._fbDb, 'users', user.uid, 'public', 'profile');
+  const mySnap = await window._fbGetDoc(myRef).catch(()=>null);
+  const myProfile = mySnap && mySnap.exists() ? mySnap.data() : null;
+
+  const isoWeek = getISOWeek();
+  const totalXP = Object.values(data.xp || {}).reduce((s,v) => s+v, 0);
+  const myWeeklyXP = (data.weeklyXPSnapshot && data.weeklyXPSnapshot[isoWeek]) || totalXP;
+
+  const entries = [{
+    uid: user.uid,
+    username: data.username || user.email?.split('@')[0] || 'you',
+    displayName: data.playerName || 'YOU',
+    weeklyXP: myWeeklyXP,
+    totalXP,
+    grade: getOverallGrade(data).short,
+    isMe: true
+  }];
+
+  // Fetch each friend's public profile
+  await Promise.all(friends.map(async friend => {
+    try {
+      const ref = window._fbDoc(window._fbDb, 'users', friend.uid, 'public', 'profile');
+      const snap = await window._fbGetDoc(ref);
+      if (snap.exists()) {
+        const p = snap.data();
+        // Only count weekly XP from the same ISO week; otherwise use 0
+        const friendWeeklyXP = p.isoWeek === isoWeek ? (p.weeklyXP || 0) : 0;
+        entries.push({
+          uid: friend.uid,
+          username: friend.username,
+          displayName: p.displayName || friend.displayName || friend.username,
+          weeklyXP: friendWeeklyXP,
+          totalXP: p.totalXP || 0,
+          grade: p.grade || '4TH GRADE',
+          isMe: false
+        });
+      } else {
+        entries.push({
+          uid: friend.uid, username: friend.username,
+          displayName: friend.displayName || friend.username,
+          weeklyXP: 0, totalXP: 0, grade: '4TH GRADE', isMe: false
+        });
+      }
+    } catch(e) {
+      entries.push({
+        uid: friend.uid, username: friend.username,
+        displayName: friend.displayName || friend.username,
+        weeklyXP: 0, totalXP: 0, grade: '4TH GRADE', isMe: false
+      });
+    }
+  }));
+
+  return entries.sort((a,b) => b.weeklyXP - a.weeklyXP);
+}
+
+async function renderFriendsView() {
+  const panel = document.getElementById('friendsPanel');
+  if (!panel) return;
+
+  const data = loadData();
+  const friends = data.friends || [];
+  const isoWeek = getISOWeek();
+  const rankEmojis = ['🥇','🥈','🥉','4','5','6','7','8','9','10'];
+
+  // Show loading state
+  panel.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:center;padding:80px 0;color:var(--text-dim);font-family:Share Tech Mono,monospace;font-size:11px;letter-spacing:2px">
+      LOADING FRIENDS DATA…
+    </div>`;
+
+  // Fetch leaderboard in background
+  let lbEntries = [];
+  try { lbEntries = await fetchLeaderboardData(); } catch(e) {}
+
+  const maxXP = lbEntries.length ? Math.max(...lbEntries.map(e=>e.weeklyXP), 1) : 1;
+
+  panel.innerHTML = `
+    <div class="friends-layout">
+      <!-- LEFT: Add friends + friends list -->
+      <div>
+        <div class="friends-section-title">ADD FRIENDS</div>
+        <div class="add-friend-box">
+          <div style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-bottom:10px">
+            SEARCH BY USERNAME — they must have set one in Settings
+          </div>
+          <div class="add-friend-row">
+            <input class="add-friend-inp" id="addFriendInp" placeholder="@username"
+              onkeydown="if(event.key==='Enter')addFriend()"
+              oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9_]/g,'')">
+            <button class="add-friend-btn" onclick="addFriend()">+ ADD</button>
+          </div>
+          <div class="add-friend-status" id="addFriendStatus"></div>
+        </div>
+
+        <div class="friends-section-title">FRIENDS (${friends.length})</div>
+        ${friends.length === 0
+          ? `<div style="padding:32px;text-align:center;color:var(--text-dim);font-family:Share Tech Mono,monospace;font-size:10px;letter-spacing:1px;background:var(--panel);border:1px solid var(--border)">
+              NO FRIENDS ADDED YET<br><span style="opacity:0.5;font-size:9px">Add friends by their username above</span>
+            </div>`
+          : friends.map(f => `
+            <div class="friend-row">
+              <div class="friend-avatar">${(f.displayName||f.username||'?')[0].toUpperCase()}</div>
+              <div class="friend-info">
+                <div class="friend-name">${(f.displayName||f.username).toUpperCase()}</div>
+                <div class="friend-meta">@${f.username}</div>
+              </div>
+              <button class="friend-remove" onclick="removeFriend('${f.username}')" title="Remove friend">✕</button>
+            </div>`).join('')
+        }
+      </div>
+
+      <!-- RIGHT: Leaderboard -->
+      <div>
+        <div class="friends-section-title">WEEKLY LEADERBOARD</div>
+        <div class="leaderboard-wrap">
+          <div class="lb-header">
+            <div class="lb-title">⚡ XP THIS WEEK</div>
+            <div class="lb-week">${getWeekLabel(isoWeek).toUpperCase()}</div>
+          </div>
+          ${lbEntries.length <= 1 && friends.length === 0
+            ? `<div class="lb-empty">ADD FRIENDS TO SEE THE LEADERBOARD<br><span style="font-size:9px;opacity:0.5">Your XP still counts — add a friend to compete!</span></div>`
+            : lbEntries.map((entry, i) => {
+                const rankClass = i < 3 ? `r${i+1}` : i < 5 ? 'r4' : '';
+                const rankDisplay = i < 3 ? rankEmojis[i] : String(i+1);
+                const barPct = maxXP > 0 ? Math.round(entry.weeklyXP / maxXP * 100) : 0;
+                return `
+                  <div class="lb-row${entry.isMe?' lb-me':''}">
+                    <div class="lb-rank ${rankClass}">${rankDisplay}</div>
+                    <div class="lb-avatar">${(entry.displayName||entry.username||'?')[0].toUpperCase()}</div>
+                    <div class="lb-info">
+                      <div class="lb-lb-name">${(entry.displayName||entry.username).toUpperCase()}${entry.isMe?' <span style="font-size:8px;color:var(--blue);letter-spacing:1px">(YOU)</span>':''}</div>
+                      <div class="lb-lb-sub">@${entry.username} · ${entry.grade}</div>
+                      <div class="lb-bar-wrap"><div class="lb-bar-bg"><div class="lb-bar-fill" style="width:${barPct}%"></div></div></div>
+                    </div>
+                    <div class="lb-xp-col">
+                      <div class="lb-xp-num">${entry.weeklyXP}</div>
+                      <div class="lb-xp-lbl">WEEKLY XP</div>
+                    </div>
+                  </div>`;
+              }).join('')
+          }
+        </div>
+        <div style="margin-top:10px;font-family:Share Tech Mono,monospace;font-size:9px;color:var(--text-dim);letter-spacing:1px;opacity:0.5;text-align:right">
+          Resets each Monday · Updates as you earn XP
+        </div>
+      </div>
+    </div>`;
+
+  // Re-attach sounds
+  setTimeout(attachSounds, 80);
+}
+
+// Publish profile on login and after any XP change
+// Hook into showWelcome to publish profile on load
+const _origShowWelcome = window.showWelcome;
+window.showWelcome = function(){
+  if(_origShowWelcome) _origShowWelcome.apply(this, arguments);
+  // Snapshot weekly XP on login
+  const data = loadData();
+  const isoWeek = getISOWeek();
+  if (!data.weeklyXPSnapshot) data.weeklyXPSnapshot = {};
+  const totalXP = Object.values(data.xp || {}).reduce((s,v) => s+v, 0);
+  if (!data.weeklyXPSnapshot[isoWeek]) {
+    data.weeklyXPSnapshot[isoWeek] = totalXP;
+    save(data);
+  }
+  setTimeout(publishPublicProfile, 2000);
+};
+
+// Hook into render to init username input
+const _origRender3 = window.render;
+window.render = function(){
+  if(_origRender3) _origRender3.apply(this, arguments);
+  initUsernameInput();
+};
+
+// ════════════════════════════════════════════════════
 // WEEKLY COMPLETE SOUND & ANIMATION
 // ════════════════════════════════════════════════════
 let _burstTimer=null;
@@ -1710,6 +2432,134 @@ function returnToStart(){
     setTimeout(()=>ss.classList.remove('fade-in'),800);
   },500);
 }
+
+// ════════════════════════════════════════════════════
+// 🌸 THEME SYSTEM
+// ════════════════════════════════════════════════════
+let _sakuraPetals=[];
+let _sakuraInterval=null;
+
+function spawnSakuraPetal(){
+  const petal=document.createElement('div');
+  petal.className='sakura-petal';
+  const emojis=['🌸','🌺','✿','❀','🌷','💮'];
+  petal.textContent=emojis[Math.floor(Math.random()*emojis.length)];
+  const left=Math.random()*100;
+  const dur=6+Math.random()*8;
+  const swayDur=2+Math.random()*3;
+  const size=10+Math.random()*10;
+  petal.style.cssText=`left:${left}vw;font-size:${size}px;animation-duration:${dur}s,${swayDur}s;animation-delay:${Math.random()*2}s,0s;`;
+  document.body.appendChild(petal);
+  _sakuraPetals.push(petal);
+  // remove after animation
+  setTimeout(()=>{petal.remove();_sakuraPetals=_sakuraPetals.filter(p=>p!==petal);},( dur+2)*1000);
+}
+
+function startSakura(){
+  if(_sakuraInterval)return;
+  // spawn a few immediately
+  for(let i=0;i<5;i++) setTimeout(spawnSakuraPetal, i*400);
+  _sakuraInterval=setInterval(spawnSakuraPetal,1800);
+}
+
+function stopSakura(){
+  if(_sakuraInterval){clearInterval(_sakuraInterval);_sakuraInterval=null;}
+  _sakuraPetals.forEach(p=>p.remove());
+  _sakuraPetals=[];
+}
+
+function setTheme(theme){
+  const data=loadData();
+  data.theme=theme;
+  save(data);
+  applyTheme(theme);
+}
+
+function applyTheme(theme){
+  const body=document.body;
+  const darkBtn=document.getElementById('themeDarkBtn');
+  const femBtn=document.getElementById('themeFemBtn');
+
+  if(theme==='feminine'){
+    body.classList.add('theme-feminine');
+    startSakura();
+    // Swap screen labels to cute text
+    document.querySelectorAll('.ls-eyebrow,.ss-eyebrow,.ws-sys,.ne-eyebrow,.system-label').forEach(el=>{
+      if(!el.dataset.origText) el.dataset.origText=el.textContent;
+      el.textContent='✿ bloom system ✿';
+    });
+    document.querySelectorAll('.ls-title,.ss-title').forEach(el=>{
+      if(!el.dataset.origHtml) el.dataset.origHtml=el.innerHTML;
+      el.innerHTML='skill<br><span>bloom</span>✨';
+    });
+    document.querySelectorAll('.ss-prompt').forEach(el=>{
+      if(!el.dataset.origText) el.dataset.origText=el.textContent;
+      el.textContent='🌸 tap to begin~';
+    });
+    document.querySelectorAll('.ss-prompt-continue').forEach(el=>{
+      if(!el.dataset.origText) el.dataset.origText=el.textContent;
+      el.textContent='🌸 continue~';
+    });
+    document.querySelectorAll('.ws-enter').forEach(el=>{
+      if(!el.dataset.origText) el.dataset.origText=el.textContent;
+      el.textContent='🌷 entering bloom…';
+    });
+    const h1=document.querySelector('.header h1');
+    if(h1){if(!h1.dataset.origHtml)h1.dataset.origHtml=h1.innerHTML;h1.innerHTML='skill <span>bloom</span> ✨';}
+    document.querySelectorAll('.ls-signin-label').forEach(el=>{
+      if(!el.dataset.origText)el.dataset.origText=el.textContent;
+      el.textContent='sign in to enter your bloom diary~';
+    });
+    // Cute grade chip labels
+    const gradeChips=document.querySelectorAll('.grade-chip');
+    const cuteGrades=[
+      '🌱 seedling · 0–39%','🌸 blossoming · 40–59%','🌺 flourishing · 60–74%',
+      '🌟 radiant · 75–89%','💎 legendary · 90–100%'
+    ];
+    gradeChips.forEach((el,i)=>{if(!el.dataset.origText)el.dataset.origText=el.textContent;if(cuteGrades[i])el.textContent=cuteGrades[i];});
+    // switch music to lo-fi
+    if(window.musicStarted){
+      window.stopMusic();
+      setTimeout(()=>window.startLofi(),500);
+    }
+    if(darkBtn){darkBtn.style.borderColor='rgba(100,100,140,0.3)';darkBtn.style.opacity='0.5';darkBtn.style.boxShadow='none';}
+    if(femBtn){femBtn.style.borderColor='#e87ee8';femBtn.style.boxShadow='0 0 20px rgba(220,100,255,0.35)';femBtn.style.opacity='1';}
+    // update particle colours
+    if(window._particleTheme)window._particleTheme('feminine');
+  } else {
+    body.classList.remove('theme-feminine');
+    stopSakura();
+    // Restore original text
+    document.querySelectorAll('[data-orig-text]').forEach(el=>{el.textContent=el.dataset.origText;});
+    document.querySelectorAll('[data-orig-html]').forEach(el=>{el.innerHTML=el.dataset.origHtml;});
+    // switch music back to dark OST
+    if(window.musicStarted || window._lofiStarted){
+      window.stopLofi&&window.stopLofi();
+      window.stopMusic&&window.stopMusic();
+      setTimeout(()=>window.startMusic&&window.startMusic(),500);
+    }
+    if(darkBtn){darkBtn.style.borderColor='var(--border-glow)';darkBtn.style.boxShadow='0 0 20px rgba(10,132,255,0.25)';darkBtn.style.opacity='1';}
+    if(femBtn){femBtn.style.borderColor='rgba(220,100,255,0.3)';femBtn.style.boxShadow='none';femBtn.style.opacity='0.7';}
+    if(window._particleTheme)window._particleTheme('dark');
+  }
+}
+
+// Hook into render to restore theme from saved data
+const _origRender2=window.render;
+window.render=function(){
+  if(_origRender2)_origRender2.apply(this,arguments);
+  const data=loadData();
+  if(data.theme)applyTheme(data.theme);
+  // also restore aria key display
+  const ariaInp=document.getElementById('ariaKeyInput');
+  if(ariaInp&&data.ariaKey)ariaInp.value=data.ariaKey;
+};
+
+// Apply theme on page load (before login)
+document.addEventListener('DOMContentLoaded',()=>{
+  const data=loadData();
+  if(data&&data.theme)applyTheme(data.theme);
+});
 </script>
 <script>
 // ════════════════════════════════════════════════════
@@ -2142,8 +2992,17 @@ document.addEventListener('DOMContentLoaded', ()=>{
   let muted = false;
   btn.addEventListener('click', ()=>{
     muted = !muted;
-    if(muted){ window.setMusicVolume(0); btn.style.color='#ff3355'; btn.style.borderColor='#ff3355'; }
-    else     { window.setMusicVolume(0.25); btn.style.color='#00e5ff'; btn.style.borderColor='#1a4a8a'; }
+    if(muted){
+      window.setMusicVolume(0);
+      window.setLofiVolume&&window.setLofiVolume(0);
+      btn.style.color='#ff3355'; btn.style.borderColor='#ff3355';
+    } else {
+      window.setMusicVolume(0.25);
+      window.setLofiVolume&&window.setLofiVolume(0.3);
+      const isFem=document.body.classList.contains('theme-feminine');
+      btn.style.color=isFem?'#ff9ec8':'#00e5ff';
+      btn.style.borderColor='#1a4a8a';
+    }
   });
   document.body.appendChild(btn);
   window._musicBtn = btn;
@@ -2153,9 +3012,293 @@ document.addEventListener('DOMContentLoaded', ()=>{
 // Start music on first user interaction (browser autoplay policy)
 const _origOnStartClick = window.onStartClick;
 window.onStartClick = function(){
-  window.startMusic();
+  const data=typeof loadData==='function'?loadData():{};
+  if(data&&data.theme==='feminine'){
+    window.startLofi&&window.startLofi();
+  } else {
+    window.startMusic();
+  }
   if(_musicBtn) { _musicBtn.style.display='flex'; _musicBtn.style.color='#00e5ff'; }
   if(_origOnStartClick) _origOnStartClick();
+};
+
+})();
+</script>
+
+<script>
+// ════════════════════════════════════════════════════
+// 🌸 LO-FI MUSIC ENGINE — Cosy Bedroom Beats
+// Layers: warm bass | mellow chords | vinyl crackle |
+//         soft piano | gentle hi-hats | dreamy pads
+// ════════════════════════════════════════════════════
+(function(){
+
+const LF = new (window.AudioContext || window.webkitAudioContext)();
+let lofiStarted = false;
+let lofiMaster, lofiReverb, lofiReverbGain;
+window._lofiStarted = false;
+
+// ── Vinyl crackle (warm noise) ─────────────────────
+function makeVinylCrackle(startT, dur){
+  const len = LF.sampleRate * dur;
+  const buf = LF.createBuffer(1, len, LF.sampleRate);
+  const d = buf.getChannelData(0);
+  // sparse crackle: mostly silence with occasional pops
+  for(let i=0;i<d.length;i++){
+    d[i] = Math.random() < 0.002 ? (Math.random()-0.5)*0.6 : (Math.random()-0.5)*0.015;
+  }
+  const src = LF.createBufferSource();
+  const g   = LF.createGain();
+  const lp  = LF.createBiquadFilter();
+  lp.type='lowpass'; lp.frequency.value=3500;
+  src.buffer=buf;
+  g.gain.setValueAtTime(0.08, startT);
+  src.connect(lp); lp.connect(g); g.connect(lofiMaster);
+  src.start(startT); src.stop(startT+dur);
+}
+
+// ── Warm low-pass reverb ───────────────────────────
+function makeLofiReverb(){
+  const dur=2.5, len=LF.sampleRate*dur;
+  const buf=LF.createBuffer(2,len,LF.sampleRate);
+  for(let c=0;c<2;c++){
+    const d=buf.getChannelData(c);
+    for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.8);
+  }
+  const conv=LF.createConvolver(); conv.buffer=buf; return conv;
+}
+
+// ── Master chain ──────────────────────────────────
+function initLofiMaster(){
+  lofiMaster=LF.createGain();
+  lofiMaster.gain.setValueAtTime(0, LF.currentTime);
+
+  // Warm low-pass for lo-fi character
+  const lp=LF.createBiquadFilter();
+  lp.type='lowpass'; lp.frequency.value=5500; lp.Q.value=0.5;
+
+  // Gentle tape-saturation via waveshaper
+  const ws=LF.createWaveShaper();
+  const curve=new Float32Array(256);
+  for(let i=0;i<256;i++){const x=i*2/255-1;curve[i]=Math.tanh(1.5*x)/Math.tanh(1.5);}
+  ws.curve=curve;
+
+  lofiReverb=makeLofiReverb();
+  lofiReverbGain=LF.createGain(); lofiReverbGain.gain.value=0.28;
+
+  lofiMaster.connect(ws); ws.connect(lp); lp.connect(LF.destination);
+  lofiMaster.connect(lofiReverb); lofiReverb.connect(lofiReverbGain);
+  lofiReverbGain.connect(LF.destination);
+}
+
+// ── Note helpers ──────────────────────────────────
+function lfOsc(freq,type,vol,startT,dur,attack=0.05,release=0.15){
+  const o=LF.createOscillator(), g=LF.createGain();
+  o.type=type; o.frequency.value=freq;
+  g.gain.setValueAtTime(0,startT);
+  g.gain.linearRampToValueAtTime(vol,startT+attack);
+  g.gain.setValueAtTime(vol,startT+dur-release);
+  g.gain.linearRampToValueAtTime(0,startT+dur);
+  o.connect(g); g.connect(lofiMaster);
+  o.start(startT); o.stop(startT+dur+0.05);
+}
+
+// ── Musical tuning — F major (warm, cosy) ─────────
+// F3=174.6, C3=130.8, A3=220, G3=196, Bb3=233.1, Eb3=155.6, D3=146.8
+const BPM = 76;
+const B   = 60/BPM;       // 1 beat
+const BAR = B*4;           // 1 bar
+
+// F major scale notes (C3 root = 130.8)
+const NOTES = {
+  C3:130.8, D3:146.8, Eb3:155.6, F3:174.6, G3:196.0,
+  A3:220.0, Bb3:233.1, C4:261.6, D4:293.7, Eb4:311.1,
+  F4:349.2, G4:392.0, A4:440.0, Bb4:466.2, C5:523.3,
+};
+
+// ── LAYER 1: Warm bass (finger-pluck feel) ─────────
+function lofiBaseline(startT, bars){
+  // F - C - Bb - F progression
+  const prog=[
+    [NOTES.F3, NOTES.C3, NOTES.Bb3, NOTES.F3],
+    [NOTES.F3, NOTES.C3, NOTES.G3,  NOTES.F3],
+  ];
+  for(let bar=0;bar<bars;bar++){
+    const chord=prog[bar%prog.length];
+    for(let beat=0;beat<4;beat++){
+      const t=startT+bar*BAR+beat*B;
+      const note=chord[beat];
+      // Pluck: sine + triangle, short decay
+      lfOsc(note,   'sine',     0.18, t, B*0.55, 0.01, 0.25);
+      lfOsc(note*2, 'triangle', 0.06, t, B*0.3,  0.01, 0.15);
+    }
+  }
+}
+
+// ── LAYER 2: Mellow jazz chords (Rhodes-ish) ──────
+function lofiChords(startT, bars){
+  // ii-V-I-IV in F: Gm7, C7, Fmaj7, Bbmaj7
+  const chords=[
+    [NOTES.G3,NOTES.Bb3,NOTES.D4,NOTES.F4],   // Gm7
+    [NOTES.C3,NOTES.E3||NOTES.Eb3,NOTES.G3,NOTES.Bb3], // C7
+    [NOTES.F3,NOTES.A3,NOTES.C4,NOTES.E4||NOTES.Eb4],  // Fmaj7
+    [NOTES.Bb3,NOTES.D4,NOTES.F4,NOTES.A4],   // Bbmaj7
+  ];
+  for(let bar=0;bar<bars;bar++){
+    const chord=chords[bar%chords.length];
+    const t=startT+bar*BAR;
+    // Strum-like: notes slightly staggered
+    chord.forEach((freq,i)=>{
+      lfOsc(freq,'sine',0.045,t+i*0.018,BAR*0.85,0.06,0.4);
+      lfOsc(freq,'triangle',0.025,t+i*0.018,BAR*0.7,0.06,0.4);
+    });
+    // Syncopated stab on beat 2.5
+    if(bar%2===0){
+      chord.forEach((freq,i)=>{
+        lfOsc(freq,'sine',0.03,t+B*1.5+i*0.012,B*0.4,0.02,0.2);
+      });
+    }
+  }
+}
+
+// ── LAYER 3: Soft piano melody ────────────────────
+function lofiMelody(startT){
+  // Gentle pentatonic melody over 4 bars
+  const melody=[
+    {n:NOTES.C5, t:0,    d:B*1.2},
+    {n:NOTES.A4, t:B*1.5,d:B*0.8},
+    {n:NOTES.Bb4,t:B*2.5,d:B*1.0},
+    {n:NOTES.G4, t:B*4,  d:B*0.9},
+    {n:NOTES.F4, t:B*5,  d:B*1.5},
+    {n:NOTES.A4, t:B*7,  d:B*0.7},
+    {n:NOTES.C5, t:B*8,  d:B*1.0},
+    {n:NOTES.Bb4,t:B*9.5,d:B*0.8},
+    {n:NOTES.G4, t:B*11, d:B*1.2},
+    {n:NOTES.F4, t:B*13, d:B*2.0},
+  ];
+  melody.forEach(({n,t,d})=>{
+    lfOsc(n,   'sine',     0.07, startT+t, d, 0.02, d*0.5);
+    lfOsc(n*2, 'triangle', 0.02, startT+t, d*0.6, 0.02, d*0.4);
+  });
+}
+
+// ── LAYER 4: Soft hi-hats ─────────────────────────
+function lofiHiHats(startT, bars){
+  for(let bar=0;bar<bars;bar++){
+    for(let eighth=0;eighth<8;eighth++){
+      // swing: odd 8ths slightly late
+      const swing = (eighth%2===1) ? B*0.055 : 0;
+      const t=startT+bar*BAR+eighth*(B/2)+swing;
+      const vol=eighth%2===0 ? 0.028 : 0.016; // accent on downbeats
+      // Filtered white noise burst
+      const len=LF.sampleRate*0.04;
+      const buf=LF.createBuffer(1,len,LF.sampleRate);
+      const d=buf.getChannelData(0);
+      for(let i=0;i<len;i++) d[i]=(Math.random()*2-1);
+      const src=LF.createBufferSource();
+      const hp=LF.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=7000;
+      const g=LF.createGain();
+      g.gain.setValueAtTime(vol,t);
+      g.gain.exponentialRampToValueAtTime(0.001,t+0.04);
+      src.buffer=buf; src.connect(hp); hp.connect(g); g.connect(lofiMaster);
+      src.start(t); src.stop(t+0.05);
+    }
+  }
+}
+
+// ── LAYER 5: Soft kick/snap ───────────────────────
+function lofiKick(startT, bars){
+  for(let bar=0;bar<bars;bar++){
+    // Kick: beats 1 & 3
+    [0, B*2].forEach(offset=>{
+      const t=startT+bar*BAR+offset;
+      lfOsc(80,  'sine', 0.32, t, B*0.3, 0.003, 0.25);
+      lfOsc(120, 'sine', 0.15, t, B*0.15,0.002, 0.12);
+    });
+    // Snap: beats 2 & 4 (rimshot feel)
+    [B, B*3].forEach(offset=>{
+      const t=startT+bar*BAR+offset;
+      lfOsc(200, 'sine',  0.08, t, B*0.05, 0.002, 0.04);
+      lfOsc(800, 'sine',  0.04, t, B*0.03, 0.002, 0.025);
+      // thin noise crack
+      const len=LF.sampleRate*0.06;
+      const buf=LF.createBuffer(1,len,LF.sampleRate);
+      const d=buf.getChannelData(0);
+      for(let i=0;i<len;i++) d[i]=(Math.random()*2-1);
+      const src=LF.createBufferSource();
+      const bp=LF.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=1800; bp.Q.value=1.2;
+      const g=LF.createGain();
+      g.gain.setValueAtTime(0.09,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.06);
+      src.buffer=buf; src.connect(bp); bp.connect(g); g.connect(lofiMaster);
+      src.start(t); src.stop(t+0.07);
+    });
+  }
+}
+
+// ── LAYER 6: Dreamy pad ───────────────────────────
+function lofiPad(startT, dur){
+  const padNotes=[NOTES.F3, NOTES.A3, NOTES.C4, NOTES.Eb4];
+  padNotes.forEach(freq=>{
+    lfOsc(freq,     'sine',     0.025, startT, dur, 3.0, 4.0);
+    lfOsc(freq*2,   'sine',     0.015, startT+0.5, dur-0.5, 3.0, 4.0);
+    lfOsc(freq*0.5, 'triangle', 0.018, startT+1, dur-1, 3.0, 4.0);
+  });
+}
+
+// ── COMPOSE: Full lo-fi loop ──────────────────────
+function composeLofi(){
+  if(!lofiStarted) return;
+  const now = LF.currentTime + 0.1;
+  const TOTAL_BARS = 8;
+  const TOTAL_DUR  = TOTAL_BARS * BAR;
+
+  // All layers over 8 bars
+  makeVinylCrackle(now, TOTAL_DUR + 2);
+  lofiPad(now, TOTAL_DUR);
+  lofiBaseline(now, TOTAL_BARS);
+  lofiChords(now, TOTAL_BARS);
+  lofiHiHats(now, TOTAL_BARS);
+  lofiKick(now, TOTAL_BARS);
+  // Melody enters at bar 2
+  lofiMelody(now + BAR);
+  // Second melody variation at bar 6
+  lofiMelody(now + BAR * 5);
+
+  // Loop
+  setTimeout(()=>{ if(lofiStarted) composeLofi(); }, (TOTAL_DUR - 0.3) * 1000);
+}
+
+// ── Fade helpers ──────────────────────────────────
+function lofiFadeIn(dur=3){
+  lofiMaster.gain.cancelScheduledValues(LF.currentTime);
+  lofiMaster.gain.setValueAtTime(lofiMaster.gain.value, LF.currentTime);
+  lofiMaster.gain.linearRampToValueAtTime(0.3, LF.currentTime+dur);
+}
+function lofiFadeOut(dur=2){
+  lofiMaster.gain.cancelScheduledValues(LF.currentTime);
+  lofiMaster.gain.setValueAtTime(lofiMaster.gain.value, LF.currentTime);
+  lofiMaster.gain.linearRampToValueAtTime(0, LF.currentTime+dur);
+}
+
+// ── Public API ────────────────────────────────────
+window.startLofi=function(){
+  if(lofiStarted) return;
+  if(LF.state==='suspended') LF.resume();
+  lofiStarted=true;
+  window._lofiStarted=true;
+  initLofiMaster();
+  composeLofi();
+  lofiFadeIn(4);
+  if(window._musicBtn){window._musicBtn.style.display='flex';window._musicBtn.style.color='#ff9ec8';}
+};
+window.stopLofi=function(){
+  lofiFadeOut(2);
+  setTimeout(()=>{lofiStarted=false;window._lofiStarted=false;},2500);
+  if(window._musicBtn) window._musicBtn.style.color='#4a6580';
+};
+window.setLofiVolume=function(v){
+  if(!lofiMaster) return;
+  lofiMaster.gain.setTargetAtTime(v, LF.currentTime, 0.5);
 };
 
 })();
