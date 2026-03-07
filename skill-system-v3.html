@@ -1026,7 +1026,7 @@ body.theme-feminine #lofiCompanion { animation:girlBreathe 4s ease-in-out infini
 <!-- ═══ BLOOM VOICE INDICATOR ═══ -->
 <div class="bloom-voice-indicator" id="bloomVoiceIndicator">
   <div class="bvi-dot"></div>
-  <span id="bloomVoiceTxt">aria is speaking~</span>
+  <span id="bloomVoiceTxt">mr pound is speaking~</span>
 </div>
 
 <!-- ═══ LOFI GIRL COMPANION ═══ -->
@@ -1789,7 +1789,7 @@ document.addEventListener('DOMContentLoaded', function(){
           <div class="settings-note">Your username lets friends find and add you. Lowercase letters, numbers, and underscores only.</div>
         </div>
         <div class="form-group" style="margin-top:16px">
-          <label class="form-label">ARIA AI KEY <span style="color:var(--text-dim);font-size:8px;letter-spacing:1px">(FREE · GEMINI)</span></label>
+          <label class="form-label">MR POUND AI KEY <span style="color:var(--text-dim);font-size:8px;letter-spacing:1px">(FREE · GEMINI)</span></label>
           <input class="form-input" id="ariaKeyInput" type="password" placeholder="Paste Gemini API key…" oninput="saveAriaKey(this.value)">
           <div class="settings-note">Free key at <span style="color:var(--blue)">aistudio.google.com/app/apikey</span> — 30 sec, no card needed.</div>
         </div>
@@ -1830,7 +1830,7 @@ document.addEventListener('DOMContentLoaded', function(){
 </button>
 
 <!-- ═══ AI CHAT BUTTON ═══ -->
-<button id="chatBtn" onclick="toggleChat()" title="Ask ARIA">
+<button id="chatBtn" onclick="toggleChat()" title="Ask MR POUND">
   <div class="chat-pulse"></div>✦
 </button>
 
@@ -1839,7 +1839,7 @@ document.addEventListener('DOMContentLoaded', function(){
   <div class="chat-hdr">
     <div class="chat-av">✦</div>
     <div>
-      <div class="chat-hdr-name">ARIA · SYSTEM AI</div>
+      <div class="chat-hdr-name">MR POUND · SYSTEM AI</div>
       <div class="chat-online">ONLINE</div>
     </div>
     <button class="chat-x" onclick="toggleChat()">✕</button>
@@ -2650,7 +2650,7 @@ function toggleChat(){
   const panel=document.getElementById('chatPanel');
   if(chatOpen){
     panel.classList.add('open');
-    if(chatHistory.length===0)addAIBubble("Hey! I'm Aria, your system assistant ✦ I can see all your skills, XP, and progress. What do you need?");
+    if(chatHistory.length===0)addAIBubble("Hey! I'm Mr Pound, your system assistant ✦ I can see all your skills, XP, and progress. What do you need?");
     setTimeout(()=>document.getElementById('chatInp').focus(),300);
   }else{
     panel.classList.remove('open');
@@ -2689,7 +2689,7 @@ async function sendChat(){
   const sem=data.semesters[data.currentSemester];
   const cw=data.currentWeek||3;
 
-  let systemPrompt=`You are Aria, a friendly AI assistant in a personal skill tracking app called Skill System. Help the user with study goals, skills, XP, and progress. Be warm, concise, and direct — 2-4 sentences unless more detail is needed. The user's name is ${data.playerName||'Player'}.`;
+  let systemPrompt=`You are Mr Pound, a friendly AI assistant in a personal skill tracking app called Skill System. Help the user with study goals, skills, XP, and progress. Be warm, concise, and direct — 2-4 sentences unless more detail is needed. The user's name is ${data.playerName||'Player'}.`;
   if(sem&&sem.skills.length){
     systemPrompt+=`\n\nCurrent week: ${cw}. Semester: ${sem.name}. Skills:`;
     sem.skills.forEach(sk=>{
@@ -2708,7 +2708,7 @@ async function sendChat(){
   const GEMINI_KEY=(window.ARIA_KEY||'').trim()||(sessionStorage.getItem('aria_key')||'').trim()||(data.ariaKey||'').trim();
   if(!GEMINI_KEY){
     removeTyping();
-    addAIBubble("Aria needs a free Gemini API key. Go to Settings and paste your key from aistudio.google.com/app/apikey");
+    addAIBubble("Mr Pound needs a free Gemini API key. Go to Settings and paste your key from aistudio.google.com/app/apikey");
     return;
   }
 
@@ -2722,7 +2722,7 @@ async function sendChat(){
     }
     const msgs=[
       {role:'user', parts:[{text:systemPrompt}]},
-      {role:'model',parts:[{text:`Understood! I'm Aria, ready to help ${data.playerName||'you'} with their skills.`}]},
+      {role:'model',parts:[{text:`Understood! I'm Mr Pound, ready to help ${data.playerName||'you'} with their skills.`}]},
       ...cleanHistory,
       {role:'user', parts:[{text:msg}]}
     ];
