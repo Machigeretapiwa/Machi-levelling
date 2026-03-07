@@ -1405,6 +1405,9 @@ function renderLicensePanel(){
 function render(){
   const _ak=sessionStorage.getItem('aria_key');if(_ak){window.ARIA_KEY=_ak;const _ki=document.getElementById('ariaKeyInput');if(_ki&&!_ki.value)_ki.value=_ak;}
   const data=loadData(),sem=data.semesters[data.currentSemester];
+  // Restore aria key from Firestore data if sessionStorage doesn't have it
+  if(data.ariaKey&&!window.ARIA_KEY){window.ARIA_KEY=data.ariaKey;sessionStorage.setItem('aria_key',data.ariaKey);}
+  const _ki2=document.getElementById('ariaKeyInput');if(_ki2&&!_ki2.value&&data.ariaKey)_ki2.value=data.ariaKey;
   document.getElementById('playerNameDisplay').textContent=data.playerName||'PLAYER';
   const og=getOverallGrade(data);
   document.getElementById('overallRankDisplay').textContent='⬡ '+og.short+' GRADE';
@@ -1618,7 +1621,7 @@ function updateSemesterName(val){const d=loadData();if(d.semesters[d.currentSeme
 // SETTINGS
 // ════════════════════════════════════════════════════
 function savePlayerName(val){const d=loadData();d.playerName=val;save(d);document.getElementById('playerNameDisplay').textContent=val||'PLAYER';renderLicensePanel();renderSkills(d);}
-function saveAriaKey(val){const k=val.trim();window.ARIA_KEY=k;sessionStorage.setItem('aria_key',k);}
+function saveAriaKey(val){const k=val.trim();window.ARIA_KEY=k;sessionStorage.setItem('aria_key',k);const d=loadData();d.ariaKey=k;save(d);}
 function saveCurrentWeek(val){const w=parseInt(val);if(isNaN(w)||w<1||w>20)return;const d=loadData();d.currentWeek=w;d.viewingWeek=w;save(d);populateWeekSel();renderSkills(d);renderLicensePanel();}
 function clearAllData(){if(!confirm('RESET ALL DATA? This cannot be undone.'))return;_dataCache=dflt();saveRemote(_dataCache);render();}
 
@@ -2322,7 +2325,7 @@ async function sendChat(){
   }
 
   // ── Aria: Gemini 1.5 Flash (free — get key at aistudio.google.com/app/apikey) ──
-  const GEMINI_KEY = window.ARIA_KEY || sessionStorage.getItem('aria_key') || '';
+  const GEMINI_KEY = window.ARIA_KEY || sessionStorage.getItem('aria_key') || loadData().ariaKey || '';
   if(!GEMINI_KEY){
     removeTyping();
     addAIBubble("Aria needs a free Gemini API key. Go to Settings and paste your key from aistudio.google.com/app/apikey — it takes 30 seconds and needs no credit card.");
