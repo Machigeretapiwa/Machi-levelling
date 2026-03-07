@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SYSTEM // Skill Tracker v5.2</title>
+<title>SYSTEM // Skill Tracker v5.3</title>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script type="module">
 // ════════════════════════════════════════════════════
@@ -2337,7 +2337,8 @@ async function sendChat(){
     ];
 
     // Try models in order until one works (handles quota/availability issues)
-    const MODELS=['gemini-1.5-flash','gemini-1.5-flash-latest','gemini-pro'];
+    // Current valid free-tier models (March 2026)
+    const MODELS=['gemini-2.5-flash','gemini-1.5-flash','gemini-1.5-flash-latest'];
     let json=null;
     for(const model of MODELS){
       const res=await fetch(
