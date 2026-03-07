@@ -3,7 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SYSTEM // Skill Tracker</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>SYSTEM // Skill Tracker v5.1</title>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script type="module">
 // ════════════════════════════════════════════════════
@@ -2304,73 +2307,60 @@ async function sendChat(){
   const sem=data.semesters[data.currentSemester];
   const cw=data.currentWeek||3;
 
-  let systemPrompt=`You are Aria, an AI assistant embedded in a personal skill tracking app called SKILL SYSTEM. You help the user with their study and skill goals. Be concise, supportive, and direct. Keep responses to 2-4 sentences unless a detailed breakdown is asked for. The user's name is ${data.playerName||'Player'}.`;
-
+  let systemPrompt=`You are Aria, an AI assistant in a skill tracking app. Be concise and supportive. User: ${data.playerName||'Player'}.`;
   if(sem&&sem.skills.length){
-    systemPrompt+=`\n\nCurrent Week: ${cw}. Semester: ${sem.name}.`;
-    systemPrompt+=`\nSkills overview:`;
+    systemPrompt+=` Week ${cw}, ${sem.name}.`;
     sem.skills.forEach(sk=>{
-      const p=pct(sk,cw);const g=getGrade(p);
-      const xpAmt=(data.xp&&data.xp[sk.id])||0;
-      const streak=(data.streaks&&data.streaks[sk.id])||0;
-      const woMap=WO[sk.id]||{};
-      // include custom weekly objectives if any
-      const customWO=sk.weeklyObjectives||{};
-      const thisWeekObjs=(woMap[cw]||[]).concat(customWO[cw]||[]);
-      const thisWeekDone=((sk.weeklyDone||{})[cw]||[]).length;
-      systemPrompt+=`\n- ${sk.name}: ${p}% (${g.short}), XP:${xpAmt}, streak:${streak}d, week ${cw} objs: ${thisWeekDone}/${thisWeekObjs.length}`;
+      const p=pct(sk,cw);
+      systemPrompt+=` ${sk.name}:${p}%,XP:${(data.xp&&data.xp[sk.id])||0}.`;
     });
     const avg=Math.round(sem.skills.reduce((s,sk)=>s+pct(sk,cw),0)/sem.skills.length);
-    systemPrompt+=`\nOverall: ${avg}%`;
+    systemPrompt+=` Overall:${avg}%.`;
   }
 
-  // ── Aria: Gemini 1.5 Flash (free — get key at aistudio.google.com/app/apikey) ──
-  const GEMINI_KEY = window.ARIA_KEY || sessionStorage.getItem('aria_key') || loadData().ariaKey || '';
+  const GEMINI_KEY=(window.ARIA_KEY||'').trim()||(sessionStorage.getItem('aria_key')||'').trim()||(data.ariaKey||'').trim();
   if(!GEMINI_KEY){
     removeTyping();
-    addAIBubble("Aria needs a free Gemini API key. Go to Settings and paste your key from aistudio.google.com/app/apikey — it takes 30 seconds and needs no credit card.");
+    addAIBubble("Aria needs a free Gemini API key. Go to Settings and paste your key from aistudio.google.com/app/apikey");
     return;
   }
+
   try{
-    // Build contents — inject system context as a leading user/model exchange
-    // so it works across all Gemini model versions
-    const historySlice = chatHistory.slice(-12);
-    const contents = [
-      // System prompt injected as first user turn + model acknowledgement
-      { role: 'user',  parts: [{ text: systemPrompt + '\n\nAcknowledge you understand and are ready.' }] },
-      { role: 'model', parts: [{ text: 'Understood. I\'m Aria, ready to help.' }] },
-      ...historySlice.map(m => ({
-        role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: m.content }]
+    // Simplest valid Gemini request: prepend system as first user message
+    const msgs=[
+      {role:'user', parts:[{text:systemPrompt}]},
+      {role:'model',parts:[{text:'Got it, ready to help!'}]},
+      ...chatHistory.slice(-10).map(m=>({
+        role:m.role==='assistant'?'model':'user',
+        parts:[{text:m.content}]
       }))
     ];
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
+
+    const res=await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
       {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          contents,
-          generationConfig: { maxOutputTokens: 400, temperature: 0.75 }
-        })
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({contents:msgs})
       }
     );
-    const json = await res.json();
-    let reply = '';
+
+    const json=await res.json();
+    let reply='';
     if(json.candidates?.[0]?.content?.parts?.[0]?.text){
-      reply = json.candidates[0].content.parts[0].text.trim();
+      reply=json.candidates[0].content.parts[0].text.trim();
     } else if(json.error){
-      reply = 'API error: ' + (json.error.message || JSON.stringify(json.error));
+      reply='Error: '+(json.error.message||JSON.stringify(json.error));
     } else {
-      reply = 'No response. Check your Gemini key in Settings.';
+      reply='No response received. Check your API key in Settings.';
     }
     removeTyping();
     addAIBubble(reply);
-    chatHistory.push({role:'assistant', content:reply});
-    if(chatHistory.length>20) chatHistory = chatHistory.slice(-20);
-  } catch(e){
+    chatHistory.push({role:'assistant',content:reply});
+    if(chatHistory.length>20)chatHistory=chatHistory.slice(-20);
+  }catch(e){
     removeTyping();
-    addAIBubble('Connection error — check your internet and try again.');
+    addAIBubble('Connection error: '+e.message);
   }
 }
 
