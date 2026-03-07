@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>SYSTEM // Skill Tracker v5.1</title>
+<title>SYSTEM // Skill Tracker v5.2</title>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script type="module">
 // ════════════════════════════════════════════════════
@@ -2336,21 +2336,34 @@ async function sendChat(){
       }))
     ];
 
-    const res=await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
-      {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({contents:msgs})
+    // Try models in order until one works (handles quota/availability issues)
+    const MODELS=['gemini-1.5-flash','gemini-1.5-flash-latest','gemini-pro'];
+    let json=null;
+    for(const model of MODELS){
+      const res=await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_KEY}`,
+        {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({contents:msgs})
+        }
+      );
+      json=await res.json();
+      // If quota exceeded or model unavailable, try next
+      if(json.error&&(json.error.status==='RESOURCE_EXHAUSTED'||json.error.status==='NOT_FOUND')){
+        continue;
       }
-    );
-
-    const json=await res.json();
+      break;
+    }
     let reply='';
-    if(json.candidates?.[0]?.content?.parts?.[0]?.text){
+    if(json&&json.candidates?.[0]?.content?.parts?.[0]?.text){
       reply=json.candidates[0].content.parts[0].text.trim();
-    } else if(json.error){
-      reply='Error: '+(json.error.message||JSON.stringify(json.error));
+    } else if(json&&json.error){
+      if(json.error.status==='RESOURCE_EXHAUSTED'){
+        reply='⚠️ Your Gemini API key has hit its free quota limit. Wait a minute and try again, or get a new key at aistudio.google.com/app/apikey — it\'s free.';
+      } else {
+        reply='Error: '+(json.error.message||JSON.stringify(json.error));
+      }
     } else {
       reply='No response received. Check your API key in Settings.';
     }
