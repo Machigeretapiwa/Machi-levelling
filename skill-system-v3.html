@@ -2887,16 +2887,43 @@ const EL_VOICE_ID = '21m00Tcm4TlvDq8ikWAM'; // Rachel — cold, precise, female
 
 let _currentAudio = null;
 
+function speakDarkFallback(text, opts={}) {
+  // Deep, cold male voice — used when ElevenLabs unavailable (local file)
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const doSpeak = () => {
+    const u = new SpeechSynthesisUtterance(text);
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find(v => /daniel/i.test(v.name) && /en/i.test(v.lang))
+      || voices.find(v => /google uk english male/i.test(v.name))
+      || voices.find(v => /microsoft david/i.test(v.name))
+      || voices.find(v => /alex/i.test(v.name))
+      || voices.find(v => /male/i.test(v.name) && /en/i.test(v.lang))
+      || voices.find(v => /en/i.test(v.lang));
+    if (preferred) u.voice = preferred;
+    u.rate = opts.rate || 0.88;
+    u.pitch = opts.pitch || 0.75;
+    u.volume = opts.volume || 1.0;
+    window.speechSynthesis.speak(u);
+  };
+  if (window.speechSynthesis.getVoices().length) { doSpeak(); }
+  else { window.speechSynthesis.onvoiceschanged = () => { doSpeak(); window.speechSynthesis.onvoiceschanged = null; }; }
+}
+
 async function speak(text, opts={}) {
-  // Bloom mode uses warm browser TTS voice, not ElevenLabs
+  // Bloom mode — warm browser TTS, never ElevenLabs
   if (opts.bloom || document.body.classList.contains('theme-feminine')) {
     speakBrowser(text, opts);
     return;
   }
-  // Cancel any currently playing audio
+  // Local file:// — ElevenLabs blocked by CORS, use fallback directly
+  if (window.location.protocol === 'file:') {
+    speakDarkFallback(text, opts);
+    return;
+  }
+  // Deployed — use ElevenLabs Rachel (cold, authoritative)
   if (_currentAudio) { _currentAudio.pause(); _currentAudio = null; }
   if (window.speechSynthesis) window.speechSynthesis.cancel();
-
   try {
     const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${EL_VOICE_ID}`, {
       method: 'POST',
@@ -2909,35 +2936,24 @@ async function speak(text, opts={}) {
         text: text,
         model_id: 'eleven_multilingual_v2',
         voice_settings: {
-          stability: 0.85,          // very stable = cold, controlled
+          stability: 0.85,
           similarity_boost: 0.75,
-          style: 0.12,              // low style = robotic, flat delivery
+          style: 0.12,
           use_speaker_boost: true
         }
       })
     });
-
     if (!res.ok) throw new Error('ElevenLabs error: ' + res.status);
-
     const blob = await res.blob();
-    const url  = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(blob);
     _currentAudio = new Audio(url);
     _currentAudio.volume = opts.volume || 1.0;
-    _currentAudio.playbackRate = opts.rate || 0.95; // slightly slower for effect
+    _currentAudio.playbackRate = opts.rate || 0.95;
     _currentAudio.play();
     _currentAudio.onended = () => { URL.revokeObjectURL(url); _currentAudio = null; };
-
   } catch(e) {
-    // Fallback to browser TTS if ElevenLabs fails
-    console.warn('ElevenLabs TTS failed, falling back to browser voice:', e);
-    if (!window.speechSynthesis) return;
-    const u = new SpeechSynthesisUtterance(text);
-    const voices = window.speechSynthesis.getVoices();
-    const v = voices.find(v=>/samantha|karen|victoria|zira|female/i.test(v.name) && /en/i.test(v.lang))
-           || voices.find(v=>/en/i.test(v.lang));
-    if (v) u.voice = v;
-    u.rate = 0.88; u.pitch = 1.1; u.volume = 1.0;
-    window.speechSynthesis.speak(u);
+    console.warn('ElevenLabs failed, using fallback:', e);
+    speakDarkFallback(text, opts);
   }
 }
 </script>
