@@ -2601,7 +2601,7 @@ function showWelcome(){
   // Click anywhere on welcome screen to skip straight in
   ws.onclick = function(){ clearTimeout(welcomeTimer); _enterMainApp(); ws.onclick=null; };
 
-  welcomeTimer=setTimeout(()=>{ ws.onclick=null; _enterMainApp(); },4000);
+  welcomeTimer=setTimeout(()=>{ ws.onclick=null; _enterMainApp(); }, isBloom ? 4000 : 15000);
 }
 
 function returnToStart(){
