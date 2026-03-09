@@ -2928,7 +2928,7 @@ async function speak(text, opts={}) {
 // ════════════════════════════════════════════════════
 (function(){
 
-const AC2 = new (window.AudioContext || window.webkitAudioContext)();
+let AC2; try { AC2 = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) { AC2 = null; }
 let musicStarted = false;
 let masterGain, reverbGain, reverbNode;
 
@@ -3130,7 +3130,7 @@ function composeScore(){
 
 // ── Fade master in/out ────────────────────────────────
 function musicFadeIn(dur=3){
-  masterGain.gain.cancelScheduledValues(AC2.currentTime);
+  if(!masterGain) return;
   masterGain.gain.setValueAtTime(masterGain.gain.value, AC2.currentTime);
   masterGain.gain.linearRampToValueAtTime(0.25, AC2.currentTime + dur);
 }
@@ -3144,6 +3144,7 @@ function musicFadeOut(dur=2){
 // ── Public API ────────────────────────────────────────
 window.startMusic = function(){
   if(musicStarted) return;
+  if(!AC2) return;
   if(AC2.state==='suspended') AC2.resume();
   musicStarted = true;
   initMaster();
