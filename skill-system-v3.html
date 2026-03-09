@@ -2516,7 +2516,8 @@ function _proceedFromStart(){
     if(content){ content.style.opacity=''; content.style.pointerEvents=''; }
     const picker = document.getElementById('themePicker');
     if(picker){ picker.classList.remove('show','hide'); }
-    await loadDataRemote();
+    const loadTimeout = new Promise(res => setTimeout(res, 3000));
+    await Promise.race([loadDataRemote(), loadTimeout]);
     showWelcome();
   }, 1200);
 }
@@ -2570,18 +2571,27 @@ function showWelcome(){
   }
 
   if(welcomeTimer)clearTimeout(welcomeTimer);
-  welcomeTimer=setTimeout(()=>{
+
+  function _enterMainApp(){
+    if(window._enteringApp) return;
+    window._enteringApp = true;
     ws.classList.add('fade-out');
     setTimeout(()=>{
       ws.classList.remove('show','fade-out');
       ws.style.display='none';
+      window._enteringApp = false;
       document.getElementById('mainApp').classList.add('show');
       document.getElementById('returnBtn').style.display='flex';
       document.getElementById('licensePanel').classList.add('visible');
       document.getElementById('chatBtn').classList.add('visible');
-      render();
+      try{ render(); } catch(e){ console.error('render error:',e); }
     },1000);
-  },5000);
+  }
+
+  // Click anywhere on welcome screen to skip straight in
+  ws.onclick = function(){ clearTimeout(welcomeTimer); _enterMainApp(); ws.onclick=null; };
+
+  welcomeTimer=setTimeout(()=>{ ws.onclick=null; _enterMainApp(); },4000);
 }
 
 function returnToStart(){
