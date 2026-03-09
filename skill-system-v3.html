@@ -3135,6 +3135,7 @@ function musicFadeIn(dur=3){
   masterGain.gain.linearRampToValueAtTime(0.25, AC2.currentTime + dur);
 }
 function musicFadeOut(dur=2){
+  if(!masterGain) return;
   masterGain.gain.cancelScheduledValues(AC2.currentTime);
   masterGain.gain.setValueAtTime(masterGain.gain.value, AC2.currentTime);
   masterGain.gain.linearRampToValueAtTime(0, AC2.currentTime + dur);
@@ -3150,6 +3151,7 @@ window.startMusic = function(){
   musicFadeIn(4);
 };
 window.stopMusic = function(){
+  if(!masterGain){ musicStarted=false; return; }
   musicFadeOut(2);
   setTimeout(()=>{ musicStarted=false; }, 2500);
 };
