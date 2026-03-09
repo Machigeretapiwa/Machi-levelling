@@ -87,7 +87,9 @@ onAuthStateChanged(auth, user => {
     if (connecting) connecting.style.display = 'none';
     if (signinWrap) signinWrap.style.display = 'block';
     document.getElementById('startScreen').classList.remove('show');
-    document.getElementById('welcomeScreen').style.display = 'none';
+    const ws = document.getElementById('welcomeScreen');
+    ws.classList.remove('show','fade-out');
+    ws.style.display = 'none';
     document.getElementById('mainApp').classList.remove('show');
     document.getElementById('returnBtn').style.display = 'none';
     document.getElementById('licensePanel').classList.remove('visible');
@@ -2528,12 +2530,14 @@ function showWelcome(){
   const isBloom = data.theme==='feminine';
 
   document.getElementById('wsName').textContent=name.toUpperCase();
-  document.getElementById('wsGrade').textContent=og.gem+' '+og.short+' GRADE';
+  document.getElementById('wsGrade').textContent=og.gem+' '+og.short;
   document.getElementById('wsGrade').style.color=og.color;
   document.getElementById('wsGrade').style.textShadow='0 0 28px '+og.color;
   document.getElementById('wsWeek').textContent='WEEK '+week+' · '+(sem?sem.name.toUpperCase():'SEMESTER 1 2026');
   const ws=document.getElementById('welcomeScreen');
-  ws.style.display='flex';ws.offsetHeight;
+  ws.style.display='';
+  ws.classList.add('show');
+  ws.offsetHeight;
 
   // Stop any leftover music/speech before starting the correct one
   window.stopLofi && window.stopLofi();
@@ -2569,7 +2573,8 @@ function showWelcome(){
   welcomeTimer=setTimeout(()=>{
     ws.classList.add('fade-out');
     setTimeout(()=>{
-      ws.style.display='none';ws.classList.remove('fade-out');
+      ws.classList.remove('show','fade-out');
+      ws.style.display='none';
       document.getElementById('mainApp').classList.add('show');
       document.getElementById('returnBtn').style.display='flex';
       document.getElementById('licensePanel').classList.add('visible');
