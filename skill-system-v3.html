@@ -2573,7 +2573,6 @@ function showWelcome(){
     speechText=`System initialised. Welcome back, ${name}.`;
     if(ng){const avg=Math.round((sem?.skills||[]).reduce((s,sk)=>s+pct(sk,week),0)/Math.max(1,(sem?.skills||[]).length));const needed=ng.min-avg;speechText+=` Current rank: ${og.short}. ${needed} percent remaining until ${ng.short}. Begin.`;}
     else{speechText+=` Current rank: Special Grade. Maximum level achieved.`;}
-    window.duckWelcomeTrack && window.duckWelcomeTrack();
     speak(speechText,{rate:0.95});
   }
 
@@ -3320,7 +3319,7 @@ if (document.readyState === 'loading') {
   window.startWelcomeTrack = function(){
     const frame = _ensureWelcomeFrame();
     // volume param sets initial volume (0-100), mute=0 keeps it unmuted
-    frame.src = 'https://www.youtube.com/embed/' + WELCOME_ID + '?autoplay=1&enablejsapi=1&start=0&volume=25';
+    frame.src = 'https://www.youtube.com/embed/' + WELCOME_ID + '?autoplay=1&enablejsapi=1&start=0&volume=8';
   };
 
   function _setWelcomeVol(pct){
@@ -3332,21 +3331,8 @@ if (document.readyState === 'loading') {
     } catch(e){}
   }
 
-  // Duck: reload iframe at 10% volume when voice starts
-  window.duckWelcomeTrack = function(){
-    if(!_welcomeFrame) return;
-    const src = _welcomeFrame.src;
-    if(src && src !== 'about:blank'){
-      _welcomeFrame.src = src.replace(/volume=\d+/, 'volume=10');
-    }
-  };
-  window.unduckWelcomeTrack = function(){
-    if(!_welcomeFrame) return;
-    const src = _welcomeFrame.src;
-    if(src && src !== 'about:blank'){
-      _welcomeFrame.src = src.replace(/volume=\d+/, 'volume=25');
-    }
-  };
+  window.duckWelcomeTrack = function(){};
+  window.unduckWelcomeTrack = function(){};
 
   window.stopWelcomeTrack = function(){
     if(window._welcomeVolPoll) clearInterval(window._welcomeVolPoll);
