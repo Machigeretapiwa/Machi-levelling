@@ -878,7 +878,46 @@ body.theme-feminine #lofiCompanion {
   0%,100%{margin-left:0px;} 50%{margin-left:40px;}
 }
 
-/* ── Welcome screen bloom variant ── */
+/* ── THEME PICKER OVERLAY ── */
+#themePicker {
+  position:absolute;inset:0;z-index:10;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);
+  opacity:0;pointer-events:none;transition:opacity 0.5s ease;
+}
+#themePicker.show { opacity:1; pointer-events:all; }
+#themePicker.hide { opacity:0; pointer-events:none; }
+.tp-label {
+  font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:6px;
+  color:var(--text-dim);margin-bottom:36px;
+}
+.tp-cards {
+  display:flex;gap:24px;flex-wrap:wrap;justify-content:center;
+}
+.tp-card {
+  width:200px;padding:28px 20px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.03);
+  cursor:pointer;transition:all 0.25s;
+  display:flex;flex-direction:column;align-items:center;gap:12px;
+  border-radius:4px;
+}
+.tp-card:hover { transform:translateY(-4px); }
+.tp-card.dark-card { border-color:rgba(10,132,255,0.3); }
+.tp-card.dark-card:hover { border-color:var(--blue);box-shadow:0 0 32px rgba(10,132,255,0.2); }
+.tp-card.bloom-card { border-color:rgba(220,100,255,0.3);border-radius:12px; }
+.tp-card.bloom-card:hover { border-color:#e87ee8;box-shadow:0 0 32px rgba(220,100,255,0.25); }
+.tp-card-icon { font-size:36px;line-height:1; }
+.tp-card-title {
+  font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;
+  letter-spacing:3px;color:var(--white);
+}
+.bloom-card .tp-card-title { font-family:'Nunito',sans-serif;letter-spacing:1px;font-size:14px; }
+.tp-card-desc {
+  font-family:'Share Tech Mono',monospace;font-size:9px;
+  letter-spacing:1px;color:var(--text-dim);text-align:center;line-height:1.6;
+}
+.bloom-card .tp-card-desc { font-family:'Nunito',sans-serif;font-size:10px; }
 #welcomeScreen.bloom-welcome {
   background: linear-gradient(180deg, #1a0a20 0%, #0d0510 100%);
 }
@@ -1303,7 +1342,7 @@ document.addEventListener('DOMContentLoaded', function(){
   <span class="sob-name"></span>
   <span style="opacity:0.5">· SIGN OUT</span>
 </button>
-<div id="startScreen" onclick="onStartClick()">
+<div id="startScreen">
   <div class="ss-ring"></div><div class="ss-ring"></div><div class="ss-ring"></div>
   <div class="ss-glow"></div>
   <div class="ss-hex" style="top:8%;left:4%;animation-delay:0s">⬡</div>
@@ -1312,12 +1351,29 @@ document.addEventListener('DOMContentLoaded', function(){
   <div class="ss-hex" style="bottom:22%;right:4%;animation-delay:0.9s">⬡</div>
   <div class="ss-hex" style="top:48%;left:1%;animation-delay:2.4s;font-size:44px">⬡</div>
   <div class="ss-hex" style="top:4%;left:42%;animation-delay:1.2s;font-size:36px">⬡</div>
-  <div class="ss-content">
+  <div class="ss-content" id="ssMainContent" onclick="onStartClick()">
     <div class="ss-eyebrow">[ S Y S T E M ]</div>
     <div class="ss-title">SKILL<br><span>SYSTEM</span></div>
     <div class="ss-sub">PERSONAL LEVELING TRACKER · UC SEMESTER 1 2026</div>
     <div class="ss-prompt">▶ CLICK TO BEGIN</div>
     <div class="ss-prompt-continue">▶ CONTINUE</div>
+  </div>
+
+  <!-- Theme picker overlay — shown on first click -->
+  <div id="themePicker">
+    <div class="tp-label">CHOOSE YOUR MODE</div>
+    <div class="tp-cards">
+      <div class="tp-card dark-card" onclick="pickTheme('dark')">
+        <div class="tp-card-icon">⚔️</div>
+        <div class="tp-card-title">DARK MODE</div>
+        <div class="tp-card-desc">Cold. Precise.<br>Solo Levelling OST.</div>
+      </div>
+      <div class="tp-card bloom-card" onclick="pickTheme('feminine')">
+        <div class="tp-card-icon">🌸</div>
+        <div class="tp-card-title">Bloom Mode</div>
+        <div class="tp-card-desc">Warm. Cosy.<br>Lofi radio & sakura.</div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -2399,14 +2455,57 @@ async function sendChat(){
 let welcomeTimer=null;
 
 function onStartClick(){
-  if(!window._fbUser){return;} // guard: shouldn't be reachable but just in case
-  const ss=document.getElementById('startScreen');
+  if(!window._fbUser) return;
+  const ss = document.getElementById('startScreen');
+  // If returning player (continue-mode), skip picker and go straight through
+  if(ss.classList.contains('continue-mode')){
+    _proceedFromStart();
+    return;
+  }
+  // First time — show theme picker
+  const picker = document.getElementById('themePicker');
+  const content = document.getElementById('ssMainContent');
+  content.style.transition = 'opacity 0.4s';
+  content.style.opacity = '0';
+  content.style.pointerEvents = 'none';
+  setTimeout(()=>{ picker.classList.add('show'); }, 300);
+}
+
+function pickTheme(theme){
+  const picker = document.getElementById('themePicker');
+  picker.classList.remove('show');
+  picker.classList.add('hide');
+
+  // Stop everything cleanly before applying new theme
+  window.stopLofi && window.stopLofi();
+  window.stopMusic && window.stopMusic();
+  if(window.speechSynthesis) window.speechSynthesis.cancel();
+  if(window._currentAudio){ window._currentAudio.pause(); window._currentAudio = null; }
+
+  // Save and apply chosen theme
+  const data = loadData();
+  data.theme = theme;
+  save(data);
+
+  // Apply theme visuals without starting music yet
+  applyThemeVisuals(theme);
+
+  setTimeout(()=>{ _proceedFromStart(); }, 400);
+}
+
+function _proceedFromStart(){
+  const ss = document.getElementById('startScreen');
   ss.classList.add('fade-out');
   setTimeout(async()=>{
     ss.classList.remove('show','fade-out','continue-mode');
-    await loadDataRemote(); // ensure fresh data before welcome
+    // Restore content opacity for next time
+    const content = document.getElementById('ssMainContent');
+    if(content){ content.style.opacity=''; content.style.pointerEvents=''; }
+    const picker = document.getElementById('themePicker');
+    if(picker){ picker.classList.remove('show','hide'); }
+    await loadDataRemote();
     showWelcome();
-  },1200);
+  }, 1200);
 }
 
 function showWelcome(){
@@ -2415,6 +2514,8 @@ function showWelcome(){
   const og=getOverallGrade(data);
   const sem=data.semesters[data.currentSemester];
   const week=data.currentWeek||3;
+  const isBloom = data.theme==='feminine';
+
   document.getElementById('wsName').textContent=name.toUpperCase();
   document.getElementById('wsGrade').textContent=og.gem+' '+og.short+' GRADE';
   document.getElementById('wsGrade').style.color=og.color;
@@ -2423,12 +2524,35 @@ function showWelcome(){
   const ws=document.getElementById('welcomeScreen');
   ws.style.display='flex';ws.offsetHeight;
 
-  // Cold, authoritative System voice — Solo Levelling style
+  // Stop any leftover music/speech before starting the correct one
+  window.stopLofi && window.stopLofi();
+  window.stopMusic && window.stopMusic();
+  if(window.speechSynthesis) window.speechSynthesis.cancel();
+  if(window._currentAudio){ window._currentAudio.pause(); window._currentAudio=null; }
+
+  // Start correct music for this theme
+  if(isBloom){
+    setTimeout(()=>window.startLofi && window.startLofi(), 400);
+  } else {
+    setTimeout(()=>window.startMusic && window.startMusic(), 400);
+  }
+
+  // Voice — bloom gets warm Mr Pound greeting, dark gets cold system voice
   const ng=nextGrade(og);
-  let speechText=`System initialised. Welcome back, ${name}.`;
-  if(ng){const data2=loadData();const avg=Math.round((data2.semesters[data2.currentSemester]?.skills||[]).reduce((s,sk)=>s+pct(sk,data2.currentWeek||3),0)/Math.max(1,(data2.semesters[data2.currentSemester]?.skills||[]).length));const needed=ng.min-avg;speechText+=` Current rank: ${og.short}. ${needed} percent remaining until ${ng.short}. Begin.`;}
-  else{speechText+=` Current rank: Special Grade. Maximum level achieved.`;}
-  speak(speechText,{rate:0.95});
+  let speechText;
+  if(isBloom){
+    const greetings=['Hey there','Welcome back','Hi','Good to see you'];
+    const greeting=greetings[Math.floor(Math.random()*greetings.length)];
+    const avg=Math.round((sem?.skills||[]).reduce((s,sk)=>s+pct(sk,week),0)/Math.max(1,(sem?.skills||[]).length));
+    const needed=ng?`Just ${ng.min-avg}% more to reach ${ng.short}. You've got this!`:`You're at max rank — legendary!`;
+    speechText=`${greeting}, ${name}! You're at ${avg}% overall. ${needed}`;
+    speak(speechText,{rate:1.05, pitch:1.2, bloom:true});
+  } else {
+    speechText=`System initialised. Welcome back, ${name}.`;
+    if(ng){const avg=Math.round((sem?.skills||[]).reduce((s,sk)=>s+pct(sk,week),0)/Math.max(1,(sem?.skills||[]).length));const needed=ng.min-avg;speechText+=` Current rank: ${og.short}. ${needed} percent remaining until ${ng.short}. Begin.`;}
+    else{speechText+=` Current rank: Special Grade. Maximum level achieved.`;}
+    speak(speechText,{rate:0.95});
+  }
 
   if(welcomeTimer)clearTimeout(welcomeTimer);
   welcomeTimer=setTimeout(()=>{
@@ -2448,16 +2572,24 @@ function returnToStart(){
   if(window.speechSynthesis)window.speechSynthesis.cancel();
   if(_currentAudio){_currentAudio.pause();_currentAudio=null;}
   if(welcomeTimer)clearTimeout(welcomeTimer);
+  // Stop all music cleanly
+  window.stopLofi && window.stopLofi();
+  window.stopMusic && window.stopMusic();
   const app=document.getElementById('mainApp'),btn=document.getElementById('returnBtn');
   const lp=document.getElementById('licensePanel'),cb=document.getElementById('chatBtn');
   app.style.transition='opacity 0.5s';app.style.opacity='0';
-  // close chat if open
   document.getElementById('chatPanel').classList.remove('open');chatOpen=false;
   setTimeout(()=>{
     app.classList.remove('show');app.style.opacity='';app.style.transition='';
     btn.style.display='none';lp.classList.remove('visible');cb.classList.remove('visible');
     const ss=document.getElementById('startScreen');
-    ss.classList.add('show','continue-mode','fade-in');ss.offsetHeight;
+    // Reset content and show theme picker fresh
+    const content=document.getElementById('ssMainContent');
+    if(content){content.style.opacity='';content.style.pointerEvents='';}
+    const picker=document.getElementById('themePicker');
+    if(picker){picker.classList.remove('show','hide');}
+    ss.classList.remove('continue-mode');
+    ss.classList.add('show','fade-in');ss.offsetHeight;
     setTimeout(()=>ss.classList.remove('fade-in'),800);
   },500);
 }
@@ -2501,18 +2633,22 @@ function setTheme(theme){
   const data=loadData();
   data.theme=theme;
   save(data);
+  // Stop all music cleanly first, then apply visuals + restart right music
+  window.stopLofi && window.stopLofi();
+  window.stopMusic && window.stopMusic();
+  if(window.speechSynthesis) window.speechSynthesis.cancel();
+  if(window._currentAudio){ window._currentAudio.pause(); window._currentAudio=null; }
   applyTheme(theme);
 }
 
-function applyTheme(theme){
+// applyThemeVisuals — visuals only, no music (used by pickTheme before welcome)
+function applyThemeVisuals(theme){
   const body=document.body;
   const darkBtn=document.getElementById('themeDarkBtn');
   const femBtn=document.getElementById('themeFemBtn');
-
   if(theme==='feminine'){
     body.classList.add('theme-feminine');
     startSakura();
-    // Swap screen labels to cute text
     document.querySelectorAll('.ls-eyebrow,.ss-eyebrow,.ws-sys,.ne-eyebrow,.system-label').forEach(el=>{
       if(!el.dataset.origText) el.dataset.origText=el.textContent;
       el.textContent='✿ bloom system ✿';
@@ -2539,43 +2675,39 @@ function applyTheme(theme){
       if(!el.dataset.origText)el.dataset.origText=el.textContent;
       el.textContent='sign in to enter your bloom diary~';
     });
-    // Cute grade chip labels
     const gradeChips=document.querySelectorAll('.grade-chip');
-    const cuteGrades=[
-      '🌱 seedling · 0–39%','🌸 blossoming · 40–59%','🌺 flourishing · 60–74%',
-      '🌟 radiant · 75–89%','💎 legendary · 90–100%'
-    ];
+    const cuteGrades=['🌱 seedling · 0–39%','🌸 blossoming · 40–59%','🌺 flourishing · 60–74%','🌟 radiant · 75–89%','💎 legendary · 90–100%'];
     gradeChips.forEach((el,i)=>{if(!el.dataset.origText)el.dataset.origText=el.textContent;if(cuteGrades[i])el.textContent=cuteGrades[i];});
-    // switch music to lo-fi — always start when entering bloom
-    if(window.musicStarted) window.stopMusic && window.stopMusic();
-    setTimeout(()=>window.startLofi && window.startLofi(), 300);
     if(darkBtn){darkBtn.style.borderColor='rgba(100,100,140,0.3)';darkBtn.style.opacity='0.5';darkBtn.style.boxShadow='none';}
     if(femBtn){femBtn.style.borderColor='#e87ee8';femBtn.style.boxShadow='0 0 20px rgba(220,100,255,0.35)';femBtn.style.opacity='1';}
-    // update particle colours
     if(window._particleTheme)window._particleTheme('feminine');
   } else {
     body.classList.remove('theme-feminine');
     stopSakura();
-    // Restore original text
     document.querySelectorAll('[data-orig-text]').forEach(el=>{el.textContent=el.dataset.origText;});
     document.querySelectorAll('[data-orig-html]').forEach(el=>{el.innerHTML=el.dataset.origHtml;});
-    // switch music back to dark OST — always, regardless of current state
-    window.stopLofi && window.stopLofi();
-    window.stopMusic && window.stopMusic();
-    setTimeout(()=>window.startMusic && window.startMusic(), 500);
     if(darkBtn){darkBtn.style.borderColor='var(--border-glow)';darkBtn.style.boxShadow='0 0 20px rgba(10,132,255,0.25)';darkBtn.style.opacity='1';}
     if(femBtn){femBtn.style.borderColor='rgba(220,100,255,0.3)';femBtn.style.boxShadow='none';femBtn.style.opacity='0.7';}
     if(window._particleTheme)window._particleTheme('dark');
   }
 }
 
-// Hook into render to restore theme from saved data
+// applyTheme — visuals + correct music (used when toggling from settings mid-session)
+function applyTheme(theme){
+  applyThemeVisuals(theme);
+  if(theme==='feminine'){
+    setTimeout(()=>window.startLofi && window.startLofi(), 300);
+  } else {
+    setTimeout(()=>window.startMusic && window.startMusic(), 500);
+  }
+}
+
+// render hook — visuals only, never restart music mid-render
 const _origRender2=window.render;
 window.render=function(){
   if(_origRender2)_origRender2.apply(this,arguments);
   const data=loadData();
-  if(data.theme)applyTheme(data.theme);
-  // also restore aria key display
+  if(data.theme)applyThemeVisuals(data.theme);
   const ariaInp=document.getElementById('ariaKeyInput');
   if(ariaInp&&data.ariaKey)ariaInp.value=data.ariaKey;
 };
