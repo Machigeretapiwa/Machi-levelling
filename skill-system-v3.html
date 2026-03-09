@@ -63,6 +63,10 @@ onAuthStateChanged(auth, user => {
       if (typeof initApp === 'function') {
         initApp().then(() => {
           window._pendingAuthUser = null;
+          // Apply saved theme immediately so start screen already reflects it
+          if (_dataCache && _dataCache.theme) {
+            applyThemeVisuals(_dataCache.theme);
+          }
           if (!_dataCache || !_dataCache.playerName || _dataCache.playerName === 'PLAYER') {
             document.getElementById('nameScreen').classList.add('show');
           } else {
@@ -2470,8 +2474,9 @@ let welcomeTimer=null;
 function onStartClick(){
   if(!window._fbUser) return;
   const ss = document.getElementById('startScreen');
-  // If returning player (continue-mode), skip picker and go straight through
-  if(ss.classList.contains('continue-mode')){
+  const data = loadData();
+  // If theme already chosen (returning player), skip picker and go straight through
+  if(data.theme || ss.classList.contains('continue-mode')){
     _proceedFromStart();
     return;
   }
@@ -2550,7 +2555,8 @@ function showWelcome(){
   if(isBloom){
     setTimeout(()=>window.startLofi && window.startLofi(), 400);
   } else {
-    setTimeout(()=>window.startMusic && window.startMusic(), 400);
+    // Play welcome track during welcome screen only
+    setTimeout(()=>window.startWelcomeTrack && window.startWelcomeTrack(), 400);
   }
 
   // Voice — bloom gets warm Mr Pound greeting, dark gets cold system voice
@@ -2567,6 +2573,7 @@ function showWelcome(){
     speechText=`System initialised. Welcome back, ${name}.`;
     if(ng){const avg=Math.round((sem?.skills||[]).reduce((s,sk)=>s+pct(sk,week),0)/Math.max(1,(sem?.skills||[]).length));const needed=ng.min-avg;speechText+=` Current rank: ${og.short}. ${needed} percent remaining until ${ng.short}. Begin.`;}
     else{speechText+=` Current rank: Special Grade. Maximum level achieved.`;}
+    window.duckWelcomeTrack && window.duckWelcomeTrack();
     speak(speechText,{rate:0.95});
   }
 
@@ -2576,6 +2583,9 @@ function showWelcome(){
     if(window._enteringApp) return;
     window._enteringApp = true;
     ws.classList.add('fade-out');
+    // Stop welcome track, hand off to dark radio
+    window.stopWelcomeTrack && window.stopWelcomeTrack();
+    if(!isBloom) setTimeout(()=>window.startMusic && window.startMusic(), 600);
     setTimeout(()=>{
       ws.classList.remove('show','fade-out');
       ws.style.display='none';
@@ -2609,11 +2619,17 @@ function returnToStart(){
     app.classList.remove('show');app.style.opacity='';app.style.transition='';
     btn.style.display='none';lp.classList.remove('visible');cb.classList.remove('visible');
     const ss=document.getElementById('startScreen');
-    // Reset content and show theme picker fresh
     const content=document.getElementById('ssMainContent');
     if(content){content.style.opacity='';content.style.pointerEvents='';}
     const picker=document.getElementById('themePicker');
     if(picker){picker.classList.remove('show','hide');}
+    // Highlight the currently active theme card
+    const data=loadData();
+    if(data.theme){
+      document.querySelectorAll('.tp-card').forEach(c=>c.style.outline='none');
+      const activeCard=document.querySelector(data.theme==='feminine'?'.bloom-card':'.dark-card');
+      if(activeCard) activeCard.style.outline='2px solid '+(data.theme==='feminine'?'#e87ee8':'var(--blue)');
+    }
     ss.classList.remove('continue-mode');
     ss.classList.add('show','fade-in');ss.offsetHeight;
     setTimeout(()=>ss.classList.remove('fade-in'),800);
@@ -3142,24 +3158,170 @@ function musicFadeOut(dur=2){
 }
 
 // ── Public API ────────────────────────────────────────
+// ── DARK RADIO — YouTube stations ─────────────────────
+const DARK_STATIONS = [
+  { id: 'x0MznxmUBK0', name: 'FIFA I',        emoji: '⚽', desc: 'FIFA soundtrack vibes' },
+  { id: 'OMe7qOR_0J8', name: 'FIFA II',       emoji: '🎮', desc: 'FIFA playlist vol. 2' },
+  { id: 'T7k3l7iKflo', name: 'Bleach Radio',   emoji: '⚔️', desc: 'Bleach OST & beats' },
+  { id: 'bHFKkCcUjW0', name: 'Ghibli Radio',   emoji: '🌿', desc: 'Studio Ghibli OST' },
+];
+let darkStation = 0;
+let darkVolume = 0.7;
+window._darkRadioStarted = false;
+
+function buildDarkRadioUI() {
+  if (document.getElementById('darkRadioWrap')) return;
+  const iframeWrap = document.createElement('div');
+  iframeWrap.id = 'darkIframeWrap';
+  iframeWrap.style.cssText = 'position:fixed;bottom:-9999px;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;z-index:-1';
+  iframeWrap.innerHTML = '<iframe id="darkYTFrame" width="1" height="1" frameborder="0" allow="autoplay; encrypted-media"></iframe>';
+  document.body.appendChild(iframeWrap);
+
+  const ui = document.createElement('div');
+  ui.id = 'darkRadioWrap';
+  ui.style.cssText = 'display:none;position:fixed;bottom:18px;right:18px;width:268px;z-index:49;font-family:\'Share Tech Mono\',monospace';
+  ui.innerHTML = `<div style="background:rgba(4,8,20,0.95);border:1px solid rgba(10,132,255,0.22);border-radius:4px;padding:12px 14px;backdrop-filter:blur(14px);box-shadow:0 6px 32px rgba(10,80,160,0.25)">
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:9px">
+      <div id="drDot" style="width:8px;height:8px;border-radius:50%;background:#333;flex-shrink:0;transition:all 0.4s"></div>
+      <div style="flex:1;min-width:0">
+        <div id="drName" style="font-size:10px;font-weight:700;color:#e0f0ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:1px"></div>
+        <div id="drDesc" style="font-size:8px;color:rgba(100,160,255,0.5);margin-top:1px;letter-spacing:0.5px"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+        <span style="font-size:8px;color:rgba(100,160,255,0.4);letter-spacing:1px">VOL</span>
+        <input id="drVol" type="range" min="0" max="100" value="70" style="width:48px;height:3px;accent-color:#0a84ff;cursor:pointer" oninput="window.setDarkRadioVolume(this.value/100)">
+      </div>
+    </div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px" id="drBtns"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:8px;color:rgba(10,132,255,0.35);letter-spacing:1px">[ DARK RADIO ]</div>
+      <a id="drLink" href="#" target="_blank" rel="noopener" style="font-size:8px;color:rgba(10,132,255,0.35);text-decoration:none;transition:color 0.2s" onmouseover="this.style.color='rgba(10,132,255,0.8)'" onmouseout="this.style.color='rgba(10,132,255,0.35)'">open on youtube ↗</a>
+    </div>
+  </div>`;
+  document.body.appendChild(ui);
+  refreshDarkStationUI();
+}
+
+function refreshDarkStationUI() {
+  const s = DARK_STATIONS[darkStation];
+  const nameEl = document.getElementById('drName');
+  const descEl = document.getElementById('drDesc');
+  const linkEl = document.getElementById('drLink');
+  const btnsEl = document.getElementById('drBtns');
+  if (nameEl) nameEl.textContent = s.emoji + ' ' + s.name.toUpperCase();
+  if (descEl) descEl.textContent = s.desc;
+  if (linkEl) linkEl.href = 'https://www.youtube.com/watch?v=' + s.id;
+  if (btnsEl) {
+    btnsEl.innerHTML = DARK_STATIONS.map((st, i) => {
+      const active = i === darkStation;
+      return `<button onclick="window.switchDarkStation(${i})" style="background:${active?'rgba(10,132,255,0.18)':'rgba(255,255,255,0.03)'};border:1px solid ${active?'rgba(10,132,255,0.5)':'rgba(255,255,255,0.07)'};border-radius:2px;padding:3px 8px;font-family:'Share Tech Mono',monospace;font-size:8px;color:${active?'#5ab0ff':'rgba(255,255,255,0.3)'};cursor:pointer;transition:all 0.2s;white-space:nowrap;letter-spacing:0.5px">${st.emoji} ${st.name.split(' ').slice(0,2).join(' ')}</button>`;
+    }).join('');
+  }
+}
+
+function setDarkDot(playing) {
+  const dot = document.getElementById('drDot');
+  if (!dot) return;
+  dot.style.background = playing ? '#0a84ff' : '#333';
+  dot.style.boxShadow = playing ? '0 0 7px #0a84ff,0 0 14px rgba(10,132,255,0.4)' : 'none';
+  dot.style.animation = playing ? 'blink 1.4s ease-in-out infinite' : 'none';
+}
+
+window.switchDarkStation = function(idx) {
+  darkStation = idx;
+  refreshDarkStationUI();
+  const frame = document.getElementById('darkYTFrame');
+  const s = DARK_STATIONS[idx];
+  if (frame) frame.src = 'https://www.youtube.com/embed/' + s.id + '?autoplay=1&enablejsapi=1';
+  setDarkDot(true);
+};
+
 window.startMusic = function(){
-  if(musicStarted) return;
-  if(!AC2) return;
-  if(AC2.state==='suspended') AC2.resume();
+  if(window._darkRadioStarted) return;
+  if (!document.getElementById('darkRadioWrap')) buildDarkRadioUI();
+  const ui = document.getElementById('darkRadioWrap');
+  if (ui) ui.style.display = 'block';
+  const frame = document.getElementById('darkYTFrame');
+  const s = DARK_STATIONS[darkStation];
+  if (frame) frame.src = 'https://www.youtube.com/embed/' + s.id + '?autoplay=1&enablejsapi=1';
+  window._darkRadioStarted = true;
+  setDarkDot(true);
   musicStarted = true;
-  initMaster();
-  composeScore();
-  musicFadeIn(4);
 };
+
 window.stopMusic = function(){
-  if(!masterGain){ musicStarted=false; return; }
-  musicFadeOut(2);
-  setTimeout(()=>{ musicStarted=false; }, 2500);
+  const frame = document.getElementById('darkYTFrame');
+  if (frame) frame.src = 'about:blank';
+  const ui = document.getElementById('darkRadioWrap');
+  if (ui) ui.style.display = 'none';
+  window._darkRadioStarted = false;
+  musicStarted = false;
+  setDarkDot(false);
 };
-window.setMusicVolume = function(v){
-  if(!masterGain) return;
-  masterGain.gain.setTargetAtTime(v, AC2.currentTime, 0.5);
+
+window.setDarkRadioVolume = function(v) {
+  darkVolume = Math.max(0, Math.min(1, v));
+  const frame = document.getElementById('darkYTFrame');
+  if (frame && frame.contentWindow) {
+    try { frame.contentWindow.postMessage(JSON.stringify({event:'command',func:'setVolume',args:[Math.round(darkVolume*100)]}), '*'); } catch(e) {}
+  }
+  const slider = document.getElementById('drVol');
+  if (slider) slider.value = Math.round(darkVolume * 100);
 };
+
+window.setMusicVolume = function(v){ window.setDarkRadioVolume(v); };
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', buildDarkRadioUI);
+} else {
+  buildDarkRadioUI();
+}
+
+// ── DARK WELCOME TRACK ────────────────────────────────
+(function(){
+  const WELCOME_ID = 'cOVJhQsd6fI';
+  let _welcomeFrame = null;
+
+  function _ensureWelcomeFrame(){
+    if(_welcomeFrame) return _welcomeFrame;
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:fixed;bottom:-9999px;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;z-index:-1';
+    _welcomeFrame = document.createElement('iframe');
+    _welcomeFrame.id = 'darkWelcomeFrame';
+    _welcomeFrame.width = '1'; _welcomeFrame.height = '1';
+    _welcomeFrame.frameBorder = '0';
+    _welcomeFrame.allow = 'autoplay; encrypted-media';
+    wrap.appendChild(_welcomeFrame);
+    document.body.appendChild(wrap);
+    return _welcomeFrame;
+  }
+
+  window.startWelcomeTrack = function(){
+    const frame = _ensureWelcomeFrame();
+    frame.src = 'https://www.youtube.com/embed/' + WELCOME_ID + '?autoplay=1&enablejsapi=1&start=0';
+    // Set low volume once iframe loads, then duck further when voice starts
+    frame.onload = function(){
+      _setWelcomeVol(30); // 30% — audible but under the voice
+    };
+  };
+
+  function _setWelcomeVol(pct){
+    if(!_welcomeFrame || !_welcomeFrame.contentWindow) return;
+    try {
+      _welcomeFrame.contentWindow.postMessage(
+        JSON.stringify({event:'command', func:'setVolume', args:[pct]}), '*'
+      );
+    } catch(e){}
+  }
+
+  // Called by showWelcome after speak() fires so music ducks under the voice
+  window.duckWelcomeTrack = function(){ _setWelcomeVol(15); };
+  window.unduckWelcomeTrack = function(){ _setWelcomeVol(30); };
+
+  window.stopWelcomeTrack = function(){
+    if(_welcomeFrame) _welcomeFrame.src = 'about:blank';
+  };
+})();
 
 // ── Music control button (mute toggle) ────────────────
 document.addEventListener('DOMContentLoaded', ()=>{
@@ -3179,12 +3341,12 @@ document.addEventListener('DOMContentLoaded', ()=>{
   btn.addEventListener('click', ()=>{
     muted = !muted;
     if(muted){
-      window.setMusicVolume(0);
+      window.setDarkRadioVolume&&window.setDarkRadioVolume(0);
       window.setLofiVolume&&window.setLofiVolume(0);
       btn.style.color='#ff3355'; btn.style.borderColor='#ff3355';
     } else {
-      window.setMusicVolume(0.25);
-      window.setLofiVolume&&window.setLofiVolume(0.3);
+      window.setDarkRadioVolume&&window.setDarkRadioVolume(0.7);
+      window.setLofiVolume&&window.setLofiVolume(0.6);
       const isFem=document.body.classList.contains('theme-feminine');
       btn.style.color=isFem?'#ff9ec8':'#00e5ff';
       btn.style.borderColor='#1a4a8a';
