@@ -3303,15 +3303,8 @@ if (document.readyState === 'loading') {
 
   window.startWelcomeTrack = function(){
     const frame = _ensureWelcomeFrame();
-    frame.src = 'https://www.youtube.com/embed/' + WELCOME_ID + '?autoplay=1&enablejsapi=1&start=0';
-    // Poll until player is ready then set volume to 30%
-    let attempts = 0;
-    const pollVol = setInterval(()=>{
-      _setWelcomeVol(30);
-      attempts++;
-      if(attempts > 20) clearInterval(pollVol);
-    }, 500);
-    window._welcomeVolPoll = pollVol;
+    // volume param sets initial volume (0-100), mute=0 keeps it unmuted
+    frame.src = 'https://www.youtube.com/embed/' + WELCOME_ID + '?autoplay=1&enablejsapi=1&start=0&volume=25';
   };
 
   function _setWelcomeVol(pct){
@@ -3323,9 +3316,21 @@ if (document.readyState === 'loading') {
     } catch(e){}
   }
 
-  // Called by showWelcome after speak() fires so music ducks under the voice
-  window.duckWelcomeTrack = function(){ _setWelcomeVol(15); };
-  window.unduckWelcomeTrack = function(){ _setWelcomeVol(30); };
+  // Duck: reload iframe at 10% volume when voice starts
+  window.duckWelcomeTrack = function(){
+    if(!_welcomeFrame) return;
+    const src = _welcomeFrame.src;
+    if(src && src !== 'about:blank'){
+      _welcomeFrame.src = src.replace(/volume=\d+/, 'volume=10');
+    }
+  };
+  window.unduckWelcomeTrack = function(){
+    if(!_welcomeFrame) return;
+    const src = _welcomeFrame.src;
+    if(src && src !== 'about:blank'){
+      _welcomeFrame.src = src.replace(/volume=\d+/, 'volume=25');
+    }
+  };
 
   window.stopWelcomeTrack = function(){
     if(window._welcomeVolPoll) clearInterval(window._welcomeVolPoll);
@@ -3371,12 +3376,11 @@ document.addEventListener('DOMContentLoaded', ()=>{
 const _origOnStartClick = window.onStartClick;
 window.onStartClick = function(){
   const data=typeof loadData==='function'?loadData():{};
+  // Only start lofi here for bloom — dark mode welcome track is started by showWelcome
   if(data&&data.theme==='feminine'){
     window.startLofi&&window.startLofi();
-  } else {
-    window.startMusic();
   }
-  if(_musicBtn) { _musicBtn.style.display='flex'; _musicBtn.style.color='#00e5ff'; }
+  if(_musicBtn) { _musicBtn.style.display='flex'; _musicBtn.style.color=data&&data.theme==='feminine'?'#ff9ec8':'#00e5ff'; }
   if(_origOnStartClick) _origOnStartClick();
 };
 
