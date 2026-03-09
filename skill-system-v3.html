@@ -1619,9 +1619,9 @@ for(let i=0;i<60;i++)pts.push({x:Math.random()*PW,y:Math.random()*PH,r:Math.rand
 (function anim(){cx.clearRect(0,0,PW,PH);pts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;if(p.x<0)p.x=PW;if(p.x>PW)p.x=0;if(p.y<0)p.y=PH;if(p.y>PH)p.y=0;cx.beginPath();cx.arc(p.x,p.y,p.r,0,Math.PI*2);cx.fillStyle=p.c;cx.globalAlpha=p.a;cx.fill();});cx.globalAlpha=1;requestAnimationFrame(anim);})();
 
 // ════════════════════════════════════════════════════
-// SPEECH — natural, enthusiastic female voice
+// SPEECH — natural, enthusiastic female voice (bloom mode / fallback)
 // ════════════════════════════════════════════════════
-function speak(text,opts={}){
+function speakBrowser(text,opts={}){
   if(!window.speechSynthesis)return;
   window.speechSynthesis.cancel();
   const doSpeak=()=>{
@@ -2888,6 +2888,11 @@ const EL_VOICE_ID = '21m00Tcm4TlvDq8ikWAM'; // Rachel — cold, precise, female
 let _currentAudio = null;
 
 async function speak(text, opts={}) {
+  // Bloom mode uses warm browser TTS voice, not ElevenLabs
+  if (opts.bloom || document.body.classList.contains('theme-feminine')) {
+    speakBrowser(text, opts);
+    return;
+  }
   // Cancel any currently playing audio
   if (_currentAudio) { _currentAudio.pause(); _currentAudio = null; }
   if (window.speechSynthesis) window.speechSynthesis.cancel();
@@ -3299,10 +3304,14 @@ if (document.readyState === 'loading') {
   window.startWelcomeTrack = function(){
     const frame = _ensureWelcomeFrame();
     frame.src = 'https://www.youtube.com/embed/' + WELCOME_ID + '?autoplay=1&enablejsapi=1&start=0';
-    // Set low volume once iframe loads, then duck further when voice starts
-    frame.onload = function(){
-      _setWelcomeVol(30); // 30% — audible but under the voice
-    };
+    // Poll until player is ready then set volume to 30%
+    let attempts = 0;
+    const pollVol = setInterval(()=>{
+      _setWelcomeVol(30);
+      attempts++;
+      if(attempts > 20) clearInterval(pollVol);
+    }, 500);
+    window._welcomeVolPoll = pollVol;
   };
 
   function _setWelcomeVol(pct){
@@ -3319,6 +3328,7 @@ if (document.readyState === 'loading') {
   window.unduckWelcomeTrack = function(){ _setWelcomeVol(30); };
 
   window.stopWelcomeTrack = function(){
+    if(window._welcomeVolPoll) clearInterval(window._welcomeVolPoll);
     if(_welcomeFrame) _welcomeFrame.src = 'about:blank';
   };
 })();
