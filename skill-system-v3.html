@@ -6,6 +6,12 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#020408">
+<meta name="apple-mobile-web-app-title" content="SYSTEM">
+<link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIlNZU1RFTSAvLyBTa2lsbCBUcmFja2VyIiwKICAic2hvcnRfbmFtZSI6ICJTWVNURU0iLAogICJzdGFydF91cmwiOiAiLiIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzAyMDQwOCIsCiAgInRoZW1lX2NvbG9yIjogIiMwMjA0MDgiLAogICJvcmllbnRhdGlvbiI6ICJwb3J0cmFpdCIKfQ==">
 <title>SYSTEM // Skill Tracker v5.7</title>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script type="module">
@@ -116,7 +122,7 @@ onAuthStateChanged(auth, user => {
   --steel:#607080;--bronze:#cd7f32;--silver:#b0b8c8;--goldC:#d4a820;--ruby:#cc2244;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
-body{background:var(--bg);color:var(--white);font-family:'Rajdhani',sans-serif;min-height:100vh;overflow-x:hidden;}
+body{background:var(--bg);color:var(--white);font-family:'Rajdhani',sans-serif;min-height:100vh;overflow-x:hidden;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
 body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);pointer-events:none;z-index:1;}
 #particles{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:0.4;}
 
@@ -554,12 +560,121 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
   .skills-grid{grid-template-columns:1fr;}
   .stats-grid{grid-template-columns:1fr 1fr;}
   .header h1{font-size:24px;}
-  .app{padding:12px;}
+  .app{padding:12px 8px;}
   .threshold-row{grid-template-columns:1fr 1fr;}
   .thresh-bar-bg,.thresh-desc{display:none;}
   #licensePanel{top:8px;right:8px;}
   .lic-card{width:150px;}
   #chatPanel{width:calc(100vw - 16px);left:8px;}
+
+  /* ── Mobile: Sign-out button ── */
+  #signOutBtn{top:10px;left:10px;padding:6px 10px;font-size:8px;}
+  .sob-avatar{width:18px;height:18px;}
+  .sob-name{max-width:80px;font-size:8px;}
+
+  /* ── Mobile: Spotify panel takes full width ── */
+  #spotifyPanel{width:100vw;max-width:100vw;border-left:none;border-radius:0;}
+  .sp-hdr{padding:14px 12px 10px;}
+  .sp-hdr-icon{width:28px;height:28px;font-size:13px;}
+  .sp-hdr-title{font-size:10px;letter-spacing:1px;}
+  .sp-close{font-size:20px;padding:6px 8px;}
+  .sp-tab{padding:10px 4px;font-size:8px;}
+  .sp-section{padding:10px 10px 4px;}
+  .sp-playlist-item{padding:8px 10px;}
+  .sp-track-item{padding:6px 10px;}
+  .sp-pl-art{width:36px;height:36px;}
+  .sp-track-art{width:28px;height:28px;}
+  .sp-pl-name{font-size:10px;}
+  .sp-track-name{font-size:10px;}
+  .sp-mini-art{width:32px;height:32px;}
+  .sp-mini-name{font-size:10px;}
+  .sp-ctrl-btn.play-btn{width:36px;height:36px;font-size:14px;}
+  .sp-vol-wrap{padding:6px 10px 4px;}
+
+  /* ── Mobile: Return pill repositioned ── */
+  #spReturnPill{bottom:16px;right:12px;padding:6px 10px 6px 8px;font-size:8px;}
+  .sp-pill-art{width:18px;height:18px;}
+  .sp-pill-text{max-width:80px;font-size:8px;}
+
+  /* ── Mobile: Dark Radio widget ── */
+  #darkRadioWrap{right:8px;bottom:68px;width:calc(100vw - 16px);max-width:320px;}
+  #darkRadioWrap > div{padding:10px 12px;}
+
+  /* ── Mobile: Lofi Radio widget ── */
+  #lofiRadioWrap{right:8px;bottom:68px;width:calc(100vw - 16px);max-width:320px;}
+  #lofiRadioWrap > div{padding:10px 12px;}
+
+  /* ── Mobile: Music button ── */
+  #musicBtn{bottom:16px;left:60px;width:36px;height:36px;font-size:12px;}
+
+  /* ── Mobile: Return button ── */
+  #returnBtn{bottom:16px;left:16px;width:36px;height:36px;font-size:10px;}
+
+  /* ── Mobile: Chat button ── */
+  #chatBtn{bottom:16px;right:16px;width:36px;height:36px;font-size:12px;}
+
+  /* ── Mobile: Nav bar ── */
+  .nav{flex-wrap:wrap;gap:0;}
+  .nav-btn{font-size:10px;padding:8px 6px;letter-spacing:0.5px;}
+
+  /* ── Mobile: Skill cards ── */
+  .skill-card{padding:14px 12px;}
+  .card-title{font-size:13px;}
+  .grade-badge{font-size:9px;padding:3px 8px;}
+
+  /* ── Mobile: Modals ── */
+  .modal-overlay .modal{width:calc(100vw - 24px);max-width:100%;margin:12px;max-height:calc(100vh - 24px);}
+
+  /* ── Mobile: Welcome screen ── */
+  .ws-name{font-size:clamp(24px,6vw,40px)!important;}
+  .ws-grade{font-size:clamp(16px,4vw,28px)!important;}
+
+  /* ── Mobile: Start screen ── */
+  .ss-title{font-size:clamp(32px,8vw,60px)!important;}
+
+  /* ── Mobile: Login screen ── */
+  .ls-title{font-size:clamp(28px,7vw,52px)!important;}
+  .ls-google-btn{padding:12px 20px;font-size:11px;}
+
+  /* ── Mobile: XP panel ── */
+  .xp-global-wrap{margin-top:20px;padding-top:16px;}
+  .xp-sk-row{padding:10px 12px;}
+
+  /* ── Mobile: Weekly objectives ── */
+  .wo-builder-wrap{padding:8px;}
+  .wo-week-row{flex-wrap:wrap;}
+  .wo-week-label{width:auto;}
+
+  /* ── Mobile: Semester modal ── */
+  .sem-weeks-note{font-size:8px;}
+
+  /* ── Mobile: Stats grid ── */
+  .stats-grid{gap:8px;}
+  .stat-card{padding:12px 10px;}
+
+  /* ── Mobile: Lofi companion ── */
+  #lofiCompanion{display:none!important;}
+}
+
+/* ── Extra small phones ── */
+@media(max-width:380px){
+  .app{padding:8px 4px;}
+  .header h1{font-size:20px;letter-spacing:1px;}
+  .nav-btn{font-size:9px;padding:6px 4px;}
+  .skill-card{padding:10px 8px;}
+  .card-title{font-size:12px;}
+  #spotifyPanel{font-size:10px;}
+  .sp-playlist-item{padding:6px 8px;}
+  .sp-track-item{padding:5px 8px;}
+  .sp-ctrl-btn.play-btn{width:32px;height:32px;}
+  .sp-vol-wrap{gap:6px;}
+}
+
+/* ── Tablet landscape ── */
+@media(min-width:601px) and (max-width:900px){
+  .skills-grid{grid-template-columns:1fr 1fr;}
+  #spotifyPanel{width:300px;}
+  .app{padding:16px;}
 }
 
 /* ══════════════════════════════════════════════════════
@@ -4129,6 +4244,38 @@ body.theme-feminine .sp-pill-text { color:var(--blue); font-family:'Nunito',sans
 }
 .sp-pill-close:hover { color:var(--white); }
 
+/* ── Spotify volume slider ── */
+.sp-vol-wrap {
+  display:flex; align-items:center; gap:8px;
+  padding:8px 14px 4px;
+  border-top:1px solid rgba(255,255,255,0.04);
+}
+.sp-vol-label {
+  font-family:'Share Tech Mono','Nunito',monospace;
+  font-size:8px; color:var(--text-dim); letter-spacing:1px; flex-shrink:0;
+}
+body.theme-feminine .sp-vol-label { font-family:'Nunito',sans-serif; }
+.sp-vol-slider {
+  flex:1; height:3px; accent-color:#1DB954; cursor:pointer;
+  -webkit-appearance:none; appearance:none; background:rgba(255,255,255,0.08);
+  border-radius:2px; outline:none;
+}
+.sp-vol-slider::-webkit-slider-thumb {
+  -webkit-appearance:none; width:12px; height:12px; border-radius:50%;
+  background:#1DB954; cursor:pointer; box-shadow:0 0 6px rgba(29,185,84,0.5);
+}
+.sp-vol-slider::-moz-range-thumb {
+  width:12px; height:12px; border-radius:50%; border:none;
+  background:#1DB954; cursor:pointer; box-shadow:0 0 6px rgba(29,185,84,0.5);
+}
+body.theme-feminine .sp-vol-slider { accent-color:var(--blue); }
+body.theme-feminine .sp-vol-slider::-webkit-slider-thumb { background:var(--blue); box-shadow:0 0 6px rgba(220,100,255,0.5); }
+body.theme-feminine .sp-vol-slider::-moz-range-thumb { background:var(--blue); box-shadow:0 0 6px rgba(220,100,255,0.5); }
+.sp-vol-pct {
+  font-family:'Share Tech Mono','Nunito',monospace;
+  font-size:8px; color:var(--text-dim); width:28px; text-align:right; flex-shrink:0;
+}
+
 /* ── Spotify button in radio panels ── */
 .sp-launch-btn {
   display:flex; align-items:center; gap:10px;
@@ -4197,6 +4344,11 @@ body.theme-feminine .sp-launch-sub { font-family:'Nunito',sans-serif; }
     </div>
     <div class="sp-mini-progress" onclick="spSeek(event)">
       <div class="sp-mini-prog-fill" id="spProgFill" style="width:0%"></div>
+    </div>
+    <div class="sp-vol-wrap">
+      <span class="sp-vol-label">VOL</span>
+      <input type="range" class="sp-vol-slider" id="spVolSlider" min="0" max="100" value="70" oninput="spSetVolume(this.value/100)">
+      <span class="sp-vol-pct" id="spVolPct">70%</span>
     </div>
   </div>
 </div>
@@ -4398,12 +4550,25 @@ function spCreatePlayer() {
   spPlayer.addListener('not_ready', () => { spDeviceId = null; });
   spPlayer.addListener('player_state_changed', state => {
     if (!state) return;
+    const wasPlaying = spPlaying;
     spPlaying = !state.paused;
     spDuration = state.duration;
     spPosition = state.position;
     const track = state.track_window?.current_track;
     if (track) spUpdateMiniPlayer(track, !state.paused);
     spUpdatePlayBtn();
+    // ── If Spotify just started playing, ensure radios are stopped ──
+    if (spPlaying && !wasPlaying) {
+      if (window._darkRadioStarted || window._lofiStarted) {
+        window._radioWasPlaying = {
+          dark: !!window._darkRadioStarted,
+          lofi: !!window._lofiStarted
+        };
+      }
+      if (window.stopMusic) window.stopMusic();
+      if (window.stopLofi) window.stopLofi();
+      if (window.stopWelcomeTrack) window.stopWelcomeTrack();
+    }
   });
   spPlayer.connect();
 }
@@ -4621,8 +4786,27 @@ window.spSeek = async function(e) {
   await spPlayer.seek(Math.round(pct * spDuration));
 };
 
+// ── Spotify Volume Control (independent of radio volumes) ──
+window.spSetVolume = function(v) {
+  v = Math.max(0, Math.min(1, v));
+  if (spPlayer) spPlayer.setVolume(v).catch(()=>{});
+  const slider = document.getElementById('spVolSlider');
+  const pctEl = document.getElementById('spVolPct');
+  if (slider) slider.value = Math.round(v * 100);
+  if (pctEl) pctEl.textContent = Math.round(v * 100) + '%';
+};
+
 function spOnPlaybackStarted() {
   document.getElementById('spMiniPlayer').classList.add('visible');
+  // ── STOP all radios when Spotify starts playing ──
+  // Save radio states so we know they were playing
+  window._radioWasPlaying = {
+    dark: !!window._darkRadioStarted,
+    lofi: !!window._lofiStarted
+  };
+  if (window.stopMusic) window.stopMusic();     // stop dark radio
+  if (window.stopLofi) window.stopLofi();        // stop lofi radio
+  if (window.stopWelcomeTrack) window.stopWelcomeTrack(); // stop welcome track
   // Fade out the panel and show return pill
   setTimeout(()=>{ closeSpotifyPanel(true); }, 600);
 }
@@ -4681,6 +4865,17 @@ window.spStopAll = function() {
   spPlaying = false;
   document.getElementById('spReturnPill').classList.remove('visible');
   document.getElementById('spMiniPlayer').classList.remove('visible');
+  // ── Restore radios that were playing before Spotify took over ──
+  if (window._radioWasPlaying) {
+    const data = typeof loadData === 'function' ? loadData() : {};
+    const isBloom = data && data.theme === 'feminine';
+    if (isBloom && window._radioWasPlaying.lofi) {
+      setTimeout(()=>{ if (window.startLofi) window.startLofi(); }, 300);
+    } else if (window._radioWasPlaying.dark) {
+      setTimeout(()=>{ if (window.startMusic) window.startMusic(); }, 300);
+    }
+    window._radioWasPlaying = null;
+  }
 };
 
 // ── Panel open/close ──────────────────────────────────────────
